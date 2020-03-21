@@ -1,9 +1,6 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import seaborn as sns
 import datetime
 
 
@@ -64,26 +61,40 @@ def countries(df, country_name):
 
 
 df_countries = load_data()
+
+
+# PLOT ----------------------- casos confirmados en Argentina
+def plt_1country(df, country_name):
+
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+    import seaborn as sns
+
+    fig, ax = plt.subplots(figsize=(16, 6))
+
+    sns.lineplot(x=df['date'], y=df['confirmed'], sort=False, linewidth=2)
+    plt.suptitle("COVID-19", fontsize=16, fontweight='bold', color='white')
+
+    plt.xticks(rotation=45)
+    plt.ylabel('casos confirmados')
+
+    ax.legend(['Argentina', 'World except China'])
+
+    fplot = '../plt/plot_' + country_name + '.png'
+    fig.savefig(fplot)
+
+
+# ------------------
+
+
+
+
 df_arg = countries(df_countries, 'Argentina')
 
+plt_1country(df_arg, 'argentina')
 
 
-#
-## PLOT ----------------------- casos confirmados en Argentina
-#fig, ax = plt.subplots(figsize=(16, 6))
-#
-#sns.lineplot(x=covid_arg['date'], y=covid_arg['confirmed'], sort=False, linewidth=2)
-#plt.suptitle("COVID-19 per country cases over the time", fontsize=16, fontweight='bold', color='white')
-#
-#plt.xticks(rotation=45)
-#plt.ylabel('Confirmed cases')
-#
-#ax.legend(['Argentina', 'World except China'])
-#
-#fig.savefig('plot_01.png')
-#
-## PLOT ----------------------- casos confirmados en Argentina
-#
-#
+
+
 
 
