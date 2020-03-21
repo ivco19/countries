@@ -19,6 +19,7 @@ Pandemic:
 - `The handbook project <https://coronavirustechhandbook.com/>`_
 - `Article in KDnuggets <https://www.kdnuggets.com/2020/03/covid-19-your-community-you-data-science-perspective.html>`_
 - `Infection Trajectory in VisualCapitalist <https://www.visualcapitalist.com/infection-trajectory-flattening-the-covid19-curve/>`_
+- `Visualization (fastcompany) <https://www.fastcompany.com/90477393/a-complete-guide-to-coronavirus-charts-be-informed-not-terrified>`_
 
 Notebooks
 ---------
