@@ -108,8 +108,48 @@ plt_IC_n(t, ics, fplot)
 
 
 
+# keep track of:
+#
+# - numero real de contagiados
+# - numero de casos confirmados
+# - numero de casos recuerados
+# - numero de fallecimientos
+# - numero de pacientes leves (en la casa)
+# - numero de pacientes moderados (internados, no UTI)
+# - numero depacientes graves (UTI)
+
+
+# infected
+# confirmed
+# recovered
+# 
+# inf_dead
+# inf_uti
+# inf_bed
+# inf_home
+# 
 
 
 
+def InfectionCurve_full(t, Ninit, loc, scale):
 
+    N = Ninit
+    ic = []
+    t_old = t[0]
 
+    for it in t:
+
+      t_new = it
+      dt = t_new - t_old
+
+      r = np.random.normal(loc=loc, scale=scale, size=None)
+      N = N + r * N * dt
+
+      ic.append(N)
+
+      t_old = t_new
+
+      print([r, t_new, dt, N])
+
+    return(ic)
+ 
