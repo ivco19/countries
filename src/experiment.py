@@ -18,11 +18,12 @@ config.read(filename)
 
 p = cv19.load_parameters(config._sections)
 
-t, inf = cv19.InfectionCurve_full(p)
- 
-fn = cv19.load_filenames(config._sections)
+#t, I, C = cv19.InfectionCurve_full(p)
+cv19.InfectionCurve_full(p)
 
-cv19.plt_IC(t, inf, fn.fname_infected)
+#fn = cv19.load_filenames(config._sections)
+
+#cv19.plt_IC_n(t, [I, C], fn.fname_infected)
 
 
 
