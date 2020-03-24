@@ -1,0 +1,8 @@
+PixelSky module
+===============
+
+.. automodule:: cv19
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
