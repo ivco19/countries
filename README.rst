@@ -2,6 +2,11 @@
 
 Tools to analize covid19 data
 
+.. image:: https://readthedocs.org/projects/ivcov19-countries/badge/?version=latest
+:target: https://ivcov19-countries.readthedocs.io/en/latest/?badge=latest
+:alt: Documentation Status
+
+
 Resources
 ---------
 
