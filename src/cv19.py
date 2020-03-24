@@ -1,424 +1,769 @@
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 import matplotlib.ticker as ticker
+from configparser import ConfigParser
 
 
-def check_file(sys_args):
+class parser(ConfigParser):
     #{{{
-    '''
-    Parse paramenters for the simulation from a .ini file
-    '''
-    import sys
-    from os.path import isfile
-
-    if len(sys_args) == 2:    
-        filename = sys_args[1]
-        if isfile(filename):
-            msg = "Loading configuration parameters from {}"
-            print(msg.format(filename) )
-        else:
-            print("Input argument is not a valid file")
-            print("Using default configuration file instead")
-            filename = '../set/config.ini'
-            #raise SystemExit(1) 
-            
-    else:
-        print('Configuration file expected (just 1 argument)')
-        print('example:  python run_correlation.py ../set/config.ini')
-        print("Using default configuration file")
-        #raise SystemExit(1) 
-        filename = '../set/config.ini'
-
-    return filename
-    #}}}
-
-def load_filenames(config):
-    #{{{
-    '''
-    Parse paramenters for the simulation from a .ini file
-    '''
-
-    from collections import namedtuple
-    import numpy as np
-
-    # Experiment settings
-    #-----------------------
     
-    exp_ID = config['experiment']['exp_id']
+#    def __init__(self):
+#        """
+#        init a parsing object
+#        """
+#        self = ConfigParser() 
+#        self.filename = ''
+        
+    def check_file(self, sys_args):
+        #{{{
+        '''
+        chek_file(args): 
+        Parse paramenters for the simulation from a .ini file
+        
+        Args:
+            filename (str): the file name of the map to be read
 
-    dir_plot = config['experiment']['dir_plot'] 
+        Raises:
 
-    ext = config['experiment']['extension'] 
+        Returns:
+            readmap: a healpix map, class ?
+        
+        ''' 
 
-    fname_infected =  config['experiment']['fname_infected'] 
-    fname_confirmed = config['experiment']['fname_confirmed']
-    fname_recovered = config['experiment']['fname_recovered']
-    fname_inf_dead =  config['experiment']['fname_inf_dead'] 
-    fname_inf_home =  config['experiment']['fname_inf_home'] 
-    fname_inf_bed =   config['experiment']['fname_inf_bed']
-    fname_inf_uti =   config['experiment']['fname_inf_uti']
-     
-    fname_infected =  dir_plot + fname_infected + '_' + exp_ID + ext
-    fname_confirmed = dir_plot + fname_confirmed + '_' + exp_ID + ext
-    fname_recovered = dir_plot + fname_recovered + '_' + exp_ID + ext
-    fname_inf_dead =  dir_plot + fname_inf_dead + '_' + exp_ID + ext 
-    fname_inf_home =  dir_plot + fname_inf_home + '_' + exp_ID + ext  
-    fname_inf_bed =   dir_plot + fname_inf_bed + '_' + exp_ID + ext 
-    fname_inf_uti =   dir_plot + fname_inf_uti + '_' + exp_ID + ext 
-
-    names = 'fname_infected \
-             fname_confirmed \
-             fname_recovered \
-             fname_inf_dead \
-             fname_inf_home \
-             fname_inf_bed \
-             fname_inf_uti'
+        import sys
+        from os.path import isfile
     
-    parset = namedtuple('pars', names)
-
-    res = parset(fname_infected, fname_confirmed, fname_recovered,
-                 fname_inf_dead, fname_inf_home, fname_inf_bed, fname_inf_uti) 
-
-    return(res)  
-
-    #}}}                
-
-def load_parameters(config):
-    #{{{
-    '''
-    Parse paramenters for the simulation from a .ini file
-    '''
-
-    from collections import namedtuple
-    import numpy as np
-
-    # Experiment settings
-    #-----------------------
-    
-    dir_data = config['experiment']['dir_data']
-    dir_plot = config['experiment']['dir_plot']
-    
-    t_max = float(config['experiment']['t_max'])
-    dt = float(config['experiment']['dt'])
-
-
-    # Transmision dynamics
-    #-------------------
-    
-    # population
-    population = int(config['transmision']['population'])
-    N_init = int(config['transmision']['n_init'])
-    R = float(config['transmision']['r'])
-
-    intervention_start = config['transmision']['intervention_start']
-    intervention_end = config['transmision']['intervention_end']
-    intervention_decrease = config['transmision']['intervention_decrease']
-    intervention_start =     float(intervention_start)
-    intervention_end =       float(intervention_end)
-    intervention_decrease =  float(intervention_decrease)
-    
-    t_incubation = float(config['transmision']['t_incubation'])
-    t_infectious = float(config['transmision']['t_infectious'])
-    
-    # Clinical dynamics
-    #-------------------
-    
-    #---# Morbidity statistics
-    
-    morbidity_file = config['clinical']['morbidity_file']
-    
-    t_death = config['clinical']['t_death']
-    bed_stay = config['clinical']['bed_stay']
-    mild_recovery = config['clinical']['mild_recovery']
-    bed_rate = config['clinical']['bed_rate']
-    bed_wait = config['clinical']['bed_wait']
-    
-
-    names = 'dir_data dir_plot t_max dt population \
-     N_init R \
-     intervention_start intervention_end intervention_decrease \
-     t_incubation t_infectious'
-    
-    parset = namedtuple('pars', names)
-
-    res = parset(dir_data, dir_plot, t_max, dt, population, \
-          N_init, R, \
-          intervention_start, intervention_end, intervention_decrease, \
-          t_incubation, t_infectious)
-
-    return(res)
-
-    #}}}                
- 
-def InfectionCurve_full_0(p):
-    #{{{
-
-    population = 100
-
-    # daily changes
-    n_I = p.N_init
-    n_S = n_C = n_R = n_H = n_B = n_U = n_D = 0
-
-    # cumulative time series
-    I = [n_I] # Infected
-    S = [n_S] # Sick or present synthoms
-    C = [n_C] # Confirmed
-    R = [n_R] # Recovered
-    H = [n_H] # sick at Home
-    B = [n_B] # sick in Bed in Health System
-    U = [n_U] # sick in Intensive Care Unit
-    D = [n_D] # dead by virus
-
-    ts = [0.] # time series
- 
-    # delay times (number in units of days!)
-    # delay times are set in number of time steps
-    T_IC = int(5. /p.dt)   # incubation time (from infection to synthoms)
-
-    T_HB = int(10./p.dt)   # time from synthoms to hospitalization (Bed)
-    T_HU = int(10./p.dt)   # time from synthoms to hospitalization (ICU)
-    T_HR = int(11./p.dt)   # Recovery time for mild cases
-    T_HD = int(10./p.dt)   # Time length for death at home
-
-    T_BH = int(10./p.dt)   # Stay in hospital until give away
-    T_BU = int(10./p.dt)   # Stay in hospital until transference to ICU
-    T_BR = int(15./p.dt)   # Length of hospital (ICU) stay              
-    T_BD = int(20./p.dt)   # Time in hospital until dead (without ICU)
-
-    T_UB = int(10./p.dt)   # Time in ICU until transference to bed
-    T_UH = int(28./p.dt)   # stay in ICU stay until give away
-    T_UR = int(28./p.dt)   # Length of hospital (ICU) stay until recovered
-    T_UD = int(28./p.dt)   # Stay in ICU until death
-
-
-    # fractions for transitions
-    f_IC = 0.95   # probability an infected person gets sick
+        if len(sys_args) == 2:    
+            filename = sys_args[1]
+            if isfile(filename):
+                msg = "Loading configuration parameters from {}"
+                print(msg.format(filename) )
+            else:
+                print("Input argument is not a valid file")
+                print("Using default configuration file instead")
+                filename = '../set/config.ini'
+                #raise SystemExit(1) 
                 
-    f_HB = 0.1    # probability of hospitalization
-    f_HU = 0.     # probability of emergency hospitalization
-    f_HR = 0.9    # probability of recovery at home
-    f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
-               
-    f_BH = 0.0    # probability of give away before recovery
-    f_BU = 0.2    # probability of transference to ICU
-    f_BR = 0.8    # probability of recovery in hospital
-    f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
+        else:
+            print('Configuration file expected (just 1 argument)')
+            print('example:  python run_correlation.py ../set/config.ini')
+            print("Using default configuration file")
+            #raise SystemExit(1) 
+            filename = '../set/config.ini'
+    
+        self.filename = filename
+        #}}}
+    
+    def read_config_file(self):
+        #{{{
+        '''
+        chek_file(args): 
+        Parse paramenters for the simulation from a .ini file
+        
+        Args:
+            filename (str): the file name of the map to be read
 
-    f_UB = 0.6     # probability of transference from ICU to common bed
-    f_UH = 0.0     # probability of give away from ICU
-    f_UR = 0.0     # probability of recovery from ICU
-    f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
+        Raises:
 
-    t = 0.
-    time_steps = 0
+        Returns:
+            readmap: a healpix map, class ?
+        
+        ''' 
 
-    while t < p.t_max:
+        import sys
+        from os.path import isfile
+    
+        self.read(self.filename)
 
-        time_steps = time_steps + 1
+        #}}}
 
-        t_prev = t
-        t = t + p.dt
-        ts.append(t)
+    def load_filenames(self):
+        #{{{
+        '''
+        load_filenames(self): 
+        make filenames based on info in config file
+        
+        Args:
+            None
+
+        Raises:
+
+        Returns:
+            list of filenames
+        
+        ''' 
+    
+        from collections import namedtuple
+        import numpy as np
+    
+        # Experiment settings
+        #-----------------------
+        
+        exp_ID = self['experiment']['exp_id']
+    
+        dir_plot = self['experiment']['dir_plot'] 
+    
+        ext = self['experiment']['extension'] 
+    
+        fname_infected =  self['experiment']['fname_infected'] 
+        fname_confirmed = self['experiment']['fname_confirmed']
+        fname_recovered = self['experiment']['fname_recovered']
+        fname_inf_dead =  self['experiment']['fname_inf_dead'] 
+        fname_inf_home =  self['experiment']['fname_inf_home'] 
+        fname_inf_bed =   self['experiment']['fname_inf_bed']
+        fname_inf_uti =   self['experiment']['fname_inf_uti']
+         
+        fname_infected =  dir_plot + fname_infected + '_' + exp_ID + ext
+        fname_confirmed = dir_plot + fname_confirmed + '_' + exp_ID + ext
+        fname_recovered = dir_plot + fname_recovered + '_' + exp_ID + ext
+        fname_inf_dead =  dir_plot + fname_inf_dead + '_' + exp_ID + ext 
+        fname_inf_home =  dir_plot + fname_inf_home + '_' + exp_ID + ext  
+        fname_inf_bed =   dir_plot + fname_inf_bed + '_' + exp_ID + ext 
+        fname_inf_uti =   dir_plot + fname_inf_uti + '_' + exp_ID + ext 
+    
+        names = 'fname_infected \
+                 fname_confirmed \
+                 fname_recovered \
+                 fname_inf_dead \
+                 fname_inf_home \
+                 fname_inf_bed \
+                 fname_inf_uti'
+        
+        parset = namedtuple('pars', names)
+    
+        res = parset(fname_infected, fname_confirmed, fname_recovered,
+                     fname_inf_dead, fname_inf_home, fname_inf_bed, fname_inf_uti) 
+    
+        self.filenames = res
+    
+        #}}}                
+    
+Todos los parámetros a los que se les asigna un valor en el archivo de
+configuración se deben leer usando el módulo 
+    def load_parameters(self):
+        #{{{
+        '''
+        load_parameters(self): 
+        load parameters from config file
+        
+        Args:
+            None
+
+        Raises:
+
+        Returns:
+            list of parameters as a named tuple
+        
+        ''' 
+        
+        from collections import namedtuple
+        import numpy as np
+    
+        # Experiment settings
+        #-----------------------
+        
+        dir_data = self['experiment']['dir_data']
+        dir_plot = self['experiment']['dir_plot']
+        
+        t_max = float(self['experiment']['t_max'])
+        dt = float(self['experiment']['dt'])
+    
+    
+        # Transmision dynamics
+        #-------------------
+        
+        # population
+        population = int(self['transmision']['population'])
+        N_init = int(self['transmision']['n_init'])
+        R = float(self['transmision']['r'])
+    
+        intervention_start = self['transmision']['intervention_start']
+        intervention_end = self['transmision']['intervention_end']
+        intervention_decrease = self['transmision']['intervention_decrease']
+        intervention_start =     float(intervention_start)
+        intervention_end =       float(intervention_end)
+        intervention_decrease =  float(intervention_decrease)
+        
+        t_incubation = float(self['transmision']['t_incubation'])
+        t_infectious = float(self['transmision']['t_infectious'])
+        
+        # Clinical dynamics
+        #-------------------
+        
+        #---# Morbidity statistics
+        
+        morbidity_file = self['clinical']['morbidity_file']
+        
+        t_death = self['clinical']['t_death']
+        bed_stay = self['clinical']['bed_stay']
+        mild_recovery = self['clinical']['mild_recovery']
+        bed_rate = self['clinical']['bed_rate']
+        bed_wait = self['clinical']['bed_wait']
+        
+    
+        names = 'dir_data dir_plot t_max dt population \
+         N_init R \
+         intervention_start intervention_end intervention_decrease \
+         t_incubation t_infectious'
+        
+        parset = namedtuple('pars', names)
+    
+        res = parset(dir_data, dir_plot, t_max, dt, population, \
+              N_init, R, \
+              intervention_start, intervention_end, intervention_decrease, \
+              t_incubation, t_infectious)
+    
+        self.p = res
+    
+        #}}}                
+    
+    #}}}
  
 
-        if time_steps > 1:
-            n_I = I[-1] * p.R * p.dt
+class table_draw:
+    #{{{
 
+    def __init__(self):
+        self.size = []
+        self.ranges = []
+        self.prob = []
+        self.dif_prob = []
 
-        print(T_IC, time_steps, len(I))
+    def load(self, filename):
+        D = pd.read_csv(filename)
+        self.D = D
+        self.size = D.shape[0]
 
-        i_IC = I[-T_IC] if T_IC < len(I) else 0
-        #i_
+    def add_clean_column(self, columnname, column):
+        self.D[columnname] = column
 
-        #n_C = i_IC * f_IC - 
+    def tabular(self, x, y):
+        self.x = self.d[x]
+        self.p = self.d[y]
+        
+    def random_gen(self, xinfname, xsupname, yname):
 
-        #I.append(n_I)
-        #C.append(n_C)
+        import sys
+        u = random()
+        j = self.size
 
-        #n_S = 0
-        #n_R = 0
-        #n_H = 0
-        #n_B = 0
-        #n_U = 0
-        #n_D = 0 
+        #msg = 'testing if %f is in interval (%f %f) / index: %i'
+        y_old = 0.
+        for i, y_new in enumerate(self.D[yname]):
+            if u > y_old and u < y_new:
+                j = i
+                #print(msg % (u, y_old, y_new, i))
+                break
+            else:
+                y_old = y_new
 
+        if j<0 or j>= self.size: 
+            print(j, self.size)
+            sys.exit()
 
-    return([ts, I, C])
+        x1 = self.D[xinfname][j]
+        x2 = self.D[xsupname][j]
+        res = (u-y_old)/(y_new-y_old)*(x2-x1) + x1
+        res = int(res)
+        return(res)
+
+    def test_random_gen(self, nran, fplot):
+
+        r = []
+        for _ in range(nran):
+            r.append(self.random_gen('x_inf', 'x_sup','y'))
+
+        from matplotlib import pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+       
+        plt.hist(r)
+        plt.suptitle("random gen test", fontsize=16, \
+                fontweight='bold', color='white')
+        plt.xticks(rotation=0)
+        plt.xlabel('X')
+        plt.ylabel('PDF')
+       
+        fig.savefig(fplot)
+        plt.close()
+       
+    def save_clean_CDF(self, filename):
+
+        df = self.D[['x_inf', 'x_sup','y']]
+        df.to_csv(filename)
+
     #}}}
 
-def InfectionCurve_full(p):
-    #{{{
-    from graph_tools import Graph
 
+class node:
+    #{{{
+    """
+    class node
+    This class is used to create and manipulated nodes.
+
+    """
+    def __init__(self, nnode, value):
+        self.id = nnode
+        self.value = value
+        self.outgoing = {}
+        self.incoming = {}
+
+    def __str__(self):
+        # para que funcione el print
+        string = str(self.id) + ' node, outgoing: ' + \
+                 str([x.id for x in self.outgoing]) + \
+                 ' incoming: ' + str([x.id for x in self.incoming])
+        return string
+
+    def add_neighbor(self, neighbor, names, values):
+        self.outgoing[neighbor] = {}
+        for n, v in zip(names, values):
+            self.outgoing[neighbor][n] = v
+        #print(neighbor.id, '---->', self)
+        #print(self.id)
+ 
+    def be_neighbor(self, neighbor, names, values):
+        self.incoming[neighbor] = {}
+        for n, v in zip(names, values):
+            self.incoming[neighbor][n] = v
+        #print(neighbor.id, '- - >', self)
+
+    def get_connections(self):
+        return self.outgoing.keys()  
+
+    def get_id(self):
+        return self.id
+
+    def get_weight(self, neighbor):
+        return self.outgoing[neighbor]
+    #}}}
+
+
+class Graph:
+    #{{{
+    """
+    class Graph
+    This class is used to create and manipulated graphs
+    It makes a heavy use of the node class 
+    A graph is made of nodes and edges.  This class allows to store
+    a value for each node and different "weights" for each edge.
+    Also, edges are directed.  
+
+    Exampe of usage:
     g = Graph()
 
-    for node in ['I','C','R','H','B','U','D',]:
-        g.add_node(node, 0)
+    for i, inode in enumerate(['A','B','C','D']):
+        print(i)
+        g.add_node(inode, 0)
 
-    g.set_node('I', p.N_init)
-    
-    # cumulative time series
-    I = [g.get_node_value('I')] # Infected
-    C = [g.get_node_value('C')] # Confirmed                    
-    R = [g.get_node_value('R')] # Recovered                    
-    H = [g.get_node_value('H')] # sick at Home                 
-    B = [g.get_node_value('B')] # sick in Bed in Health System 
-    U = [g.get_node_value('U')] # sick in Intensive Care Unit  
-    D = [g.get_node_value('D')] # dead by virus                
+    nms = ['x', 'y']
+    g.add_edge('A', 'B', nms, [1, 100])
+    g.add_edge('A', 'C', nms, [2, 200])
+    g.add_edge('B', 'D', nms, [3, 300])
+    g.add_edge('D', 'B', nms, [4, 400])
+    g.add_edge('D', 'C', nms, [5, 500])
+    g.add_edge('C', 'C', nms, [6, 600])
 
-    ts = [0.] # time series
-    nms = ['prob','lag']
-    p_dt = 1.
+    # A node can be connected to itself.
+    g.add_edge('B', 'B', nms, [333, 333])
+
+    g.show()
+
+
+    Attributes
+    ----------
+    vert_dict: dict
+        a dict containing the vertices
+    num_vertices : int
+        the number of nodes (or vertices) in a graph
+
+    Methods
+    -------
+    add_node(node, value)
+    get_node()
+    get_node_value()
+    set_node()
+    get_vertices()
+    get_nodes_to()
+    get_nodes_from()
+
+
+    """
+    def __init__(self):
+        """
+        init a Graph object
+        """
+        self.vert_dict = {}
+        self.num_vertices = 0
+
+    def __iter__(self):
+        return iter(self.vert_dict.values())
+
+    # node functions --------------------------------------
+    def add_node(self, nnode, value):
+        """
+        method: add_node
+     
+        Adds a node to a graph. The node must have a value.
+
+        """
+        self.num_vertices = self.num_vertices + 1
+        new_node = node(nnode, value)
+        self.vert_dict[nnode] = new_node
+        return new_node
+
+    def get_node(self, n):
+        """
+        method: get_node
+     
+        Parameters
+        ----------
+           n: str
+        Returns
+        -------
+           node: a node object
+        """
+
+        if n in self.vert_dict:
+            return self.vert_dict[n]
+        else:
+            return None
+
+    def get_node_value(self, n):
+        """
+        method: get_node_value
+     
+        Parameters
+        ----------
+           n: str
+
+        Returns
+        -------
+           value: float
+        """
  
-    # delay times (number in units of days!)
-    # delay times are set in number of time steps
-    T_IC = int(5. /p_dt)   # incubation time (from infection to synthoms)
+        if n in self.vert_dict:
+            return self.vert_dict[n].value
+        else:
+            return None
 
-    T_CH = 0
-    T_CB = 0
-    T_CU = 0
-    T_CD = 0
+    def set_node(self, n, value):
+        """
+        method: set_node
+     
+        Parameters
+        ----------
+           n: str
+              The ID or name of the node
+           value: float
+              The value to be assigned to the node
 
-    T_HB = int(10./p_dt)   # time from synthoms to hospitalization (Bed)
-    T_HU = int(10./p_dt)   # time from synthoms to hospitalization (ICU)
-    T_HR = int(11./p_dt)   # Recovery time for mild cases
-    T_HD = int(10./p_dt)   # Time length for death at home
+        Returns
+        -------
+           updates the Graph
+        """
+   
+        if n in self.vert_dict:
+            v = self.get_node(n)
+            v.value = value
+        else:
+            return None
 
-    T_BH = int(10./p_dt)   # Stay in hospital until give away
-    T_BU = int(10./p_dt)   # Stay in hospital until transference to ICU
-    T_BR = int(15./p_dt)   # Length of hospital (ICU) stay              
-    T_BD = int(20./p_dt)   # Time in hospital until dead (without ICU)
+    def get_vertices(self):
+        return self.vert_dict.keys()
 
-    T_UB = int(10./p_dt)   # Time in ICU until transference to bed
-    T_UH = int(28./p_dt)   # stay in ICU stay until give away
-    T_UR = int(28./p_dt)   # Length of hospital (ICU) stay until recovered
-    T_UD = int(28./p_dt)   # Stay in ICU until death
+    def get_nodes_to(self, nnode):
+        v = self.get_node(nnode)
+        c = []
+        for i in v.incoming:
+            c.append(i.id)
+        return(c)
 
-    # fractions for transitions
-    f_IC = 0.95   # probability an infected person gets sick
+    def get_nodes_from(self, nnode):
+        v = self.get_node(nnode)
+        c = []
+        for i in v.outgoing:
+            c.append(i.id)
+        return(c)
 
-    f_CH = 0.95   # probability of a domiciliary confirmation
-    f_CB = 0.05   # probability of a confirmation in health system
-    f_CU = 0.00   # probability of a confirmation in ICU
-    f_CD = 1. - f_CH - f_CB - f_CU   # probability of a confirmation in autopsy
-                
-    f_HB = 0.1    # probability of hospitalization
-    f_HU = 0.     # probability of emergency hospitalization
-    f_HR = 0.9    # probability of recovery at home
-    f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
-               
-    f_BH = 0.0    # probability of give away before recovery
-    f_BU = 0.2    # probability of transference to ICU
-    f_BR = 0.8    # probability of recovery in hospital
-    f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
 
-    f_UB = 0.6     # probability of transference from ICU to common bed
-    f_UH = 0.0     # probability of give away from ICU
-    f_UR = 0.0     # probability of recovery from ICU
-    f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
-                                                                    
+    # edge functions --------------------------------------
+    def add_edge(self, frm, to, names = [], values = 0):
+        """
+        warning: does not verify if edge already exists
+        """
+        mis1 = frm not in self.vert_dict
+        mis2 = to not in self.vert_dict
+        if mis1 or mis2:
+            print('Not a node called ')
+            print(frm)
+            print(to)
 
-    g.add_edge('I', 'I', nms, [p.R,  0])
+        self.vert_dict[frm].add_neighbor(self.vert_dict[to], names, values)
+
+        self.vert_dict[to].be_neighbor(self.vert_dict[frm], names, values)
+
+    def get_edge(self, frm, to, field):
+        if frm not in self.vert_dict:
+            self.add_node(frm)
+        if to not in self.vert_dict:
+            self.add_node(to)
+
+        v_frm = self.get_node(frm)
+        v_to  = self.get_node(to)
+
+        ws = v_frm.get_weight(v_to)
+        value = ws[field]
+        return(value)
+
+ 
+    # graph functions --------------------------------------
+    def show(self):
+        for v in self:
+            print('NODE %s:  %f' % (v.id, v.value))
+            for w in v.get_connections():
+                vid = v.get_id()
+                wid = w.get_id()
+                print ('             %s -> %s %s' % (vid, wid, v.get_weight(w)))
+
+    # computation functions --------------------------------
+    def node_activation(self, nnode, key):
+        l = self.get_nodes_to(nnode)
+        x = []
+        for v in l:
+            a = self.get_node(v)
+            x.append( self.get_edge(a.id, nnode, key) )
+        return(x)
+
+    #}}}
+
+
+class InfectionCurve:
+    #{{{
+     
+    def compute(self, p):
+        #{{{
+        '''
+        InfectionCurve(self, p): 
+        computes the Infection Curve based on a probabilistic model
+        implemented in a simulation
+        
+        Args:
+            config object from ParseConfig
+      
+        Raises:
+      
+        Returns:
+            Time series for the curves of:
+            - Infected
+            - Confirmed
+            - Recovered
+            - Confirmed at home
+            - Confirmed at hospital
+            - Confirmed at ICU
+            - Dead
+        
+        ''' 
+ 
+        #from graph_tools import Graph
     
-    g.add_edge('I', 'C', nms, [f_IC, T_IC])
-
-    g.add_edge('C', 'H', nms, [f_CH, T_CH])
-    g.add_edge('C', 'B', nms, [f_CB, T_CB])
-    g.add_edge('C', 'U', nms, [f_CU, T_CU])
-
-    g.add_edge('H', 'B', nms, [f_HB, T_HB])
-    g.add_edge('H', 'U', nms, [f_HU, T_HU])
-    g.add_edge('H', 'R', nms, [f_HR, T_HR])
-    g.add_edge('H', 'D', nms, [f_HD, T_HD])
-
-    g.add_edge('B', 'H', nms, [f_BH, T_BH])
-    g.add_edge('B', 'U', nms, [f_BU, T_BU])
-    g.add_edge('B', 'R', nms, [f_BR, T_BR])
-    g.add_edge('B', 'D', nms, [f_BD, T_BD])
-
-    g.add_edge('U', 'B', nms, [f_UB, T_UB])
-    g.add_edge('U', 'H', nms, [f_UH, T_UH])
-    g.add_edge('U', 'R', nms, [f_UR, T_UR])
-    g.add_edge('U', 'D', nms, [f_UD, T_UD])
-
-    t = 0.
-    time_steps = 0
-
-    while t < p.t_max:
-
-        time_steps = time_steps + 1
-
-        t_prev = t
-        t = t + p.dt
-        ts.append(t)
-
-
-        # activation of all nodes
-        v = g.get_node('I')
-        prob = g.node_activation('I', 'prob')[0]
-        lag = g.node_activation('I', 'lag')[0]
-
-        ilag = -lag if lag < len(I) else 1
-        n_I = I[-1] + I[ilag] * prob * p.dt
-        I.append(n_I)
-
-        #### TO DO:
-        # completar las demas variables (nodos)
-        # ver si se puede escribir por comprension
-
-
-    return([ts, I])
-    #}}}
-
-def plt_IC(t, ic, fplot):
-    #{{{
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    ax.set(yscale="log")
-    ax.yaxis.set_major_formatter(\
-            ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
-
-    sns.lineplot(x=t, y=ic, sort=False, linewidth=2)
-    sns.scatterplot(t, ic)
-
-    plt.suptitle("Infection curve", fontsize=16, fontweight='bold', color='white')
-    plt.xticks(rotation=0)
-    plt.xlabel('Time [days]')
-    plt.ylabel('Number infected')
-
-    fig.savefig(fplot)
-    plt.close()
-    #}}}
-                        
-def plt_IC_n(t, ics, fplot):
-    #{{{
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    ax.set(yscale="log")
-    ax.yaxis.set_major_formatter(\
-            ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
-
-    for ic in ics:
+        g = Graph()
+    
+        for node in ['I','C','R','H','B','U','D',]:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        I = [g.get_node_value('I')] # Infected
+        C = [g.get_node_value('C')] # Confirmed                    
+        R = [g.get_node_value('R')] # Recovered                    
+        H = [g.get_node_value('H')] # sick at Home                 
+        B = [g.get_node_value('B')] # sick in Bed in Health System 
+        U = [g.get_node_value('U')] # sick in Intensive Care Unit  
+        D = [g.get_node_value('D')] # dead by virus                
+    
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        # delay times (number in units of days!)
+        # delay times are set in number of time steps
+        T_IC = int(5. /p_dt)   # incubation time (from infection to synthoms)
+    
+        T_CH = 0
+        T_CB = 0
+        T_CU = 0
+        T_CD = 0
+    
+        T_HB = int(10./p_dt)   # time from synthoms to hospitalization (Bed)
+        T_HU = int(10./p_dt)   # time from synthoms to hospitalization (ICU)
+        T_HR = int(11./p_dt)   # Recovery time for mild cases
+        T_HD = int(10./p_dt)   # Time length for death at home
+    
+        T_BH = int(10./p_dt)   # Stay in hospital until give away
+        T_BU = int(10./p_dt)   # Stay in hospital until transference to ICU
+        T_BR = int(15./p_dt)   # Length of hospital (ICU) stay              
+        T_BD = int(20./p_dt)   # Time in hospital until dead (without ICU)
+    
+        T_UB = int(10./p_dt)   # Time in ICU until transference to bed
+        T_UH = int(28./p_dt)   # stay in ICU stay until give away
+        T_UR = int(28./p_dt)   # Length of hospital (ICU) stay until recovered
+        T_UD = int(28./p_dt)   # Stay in ICU until death
+    
+        # fractions for transitions
+        f_IC = 0.95   # probability an infected person gets sick
+    
+        f_CH = 0.95   # probability of a domiciliary confirmation
+        f_CB = 0.05   # probability of a confirmation in health system
+        f_CU = 0.00   # probability of a confirmation in ICU
+        f_CD = 1. - f_CH - f_CB - f_CU   # probability of a confirmation in autopsy
+                    
+        f_HB = 0.1    # probability of hospitalization
+        f_HU = 0.     # probability of emergency hospitalization
+        f_HR = 0.9    # probability of recovery at home
+        f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
+                   
+        f_BH = 0.0    # probability of give away before recovery
+        f_BU = 0.2    # probability of transference to ICU
+        f_BR = 0.8    # probability of recovery in hospital
+        f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
+    
+        f_UB = 0.6     # probability of transference from ICU to common bed
+        f_UH = 0.0     # probability of give away from ICU
+        f_UR = 0.0     # probability of recovery from ICU
+        f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
+                                                                        
+    
+        g.add_edge('I', 'I', nms, [p.R,  0])
+        
+        g.add_edge('I', 'C', nms, [f_IC, T_IC])
+    
+        g.add_edge('C', 'H', nms, [f_CH, T_CH])
+        g.add_edge('C', 'B', nms, [f_CB, T_CB])
+        g.add_edge('C', 'U', nms, [f_CU, T_CU])
+    
+        g.add_edge('H', 'B', nms, [f_HB, T_HB])
+        g.add_edge('H', 'U', nms, [f_HU, T_HU])
+        g.add_edge('H', 'R', nms, [f_HR, T_HR])
+        g.add_edge('H', 'D', nms, [f_HD, T_HD])
+    
+        g.add_edge('B', 'H', nms, [f_BH, T_BH])
+        g.add_edge('B', 'U', nms, [f_BU, T_BU])
+        g.add_edge('B', 'R', nms, [f_BR, T_BR])
+        g.add_edge('B', 'D', nms, [f_BD, T_BD])
+    
+        g.add_edge('U', 'B', nms, [f_UB, T_UB])
+        g.add_edge('U', 'H', nms, [f_UH, T_UH])
+        g.add_edge('U', 'R', nms, [f_UR, T_UR])
+        g.add_edge('U', 'D', nms, [f_UD, T_UD])
+    
+        t = 0.
+        time_steps = 0
+    
+        while t < p.t_max:
+    
+            time_steps = time_steps + 1
+    
+            t_prev = t
+            t = t + p.dt
+            ts.append(t)
+    
+            # activation of all nodes
+            v = g.get_node('I')
+            prob = g.node_activation('I', 'prob')[0]
+            lag = g.node_activation('I', 'lag')[0]
+    
+            ilag = -lag if lag < len(I) else 1
+            n_I = I[-1] + I[ilag] * prob * p.dt
+            I.append(n_I)
+    
+            #### TO DO:
+            # completar las demas variables (nodos)
+            # ver si se puede escribir por comprension
+    
+    
+        return([ts, I])
+        #}}}
+    
+    def plt_IC(t, ic, fplot):
+        #{{{
+        """
+        plt_IC()
+        plots the infection curve
+     
+        Args:
+            ic: time series
+            fplot: filename for the plot
+     
+        Raises:
+     
+        Returns:
+            Nothing, just save the plot.
+     
+        """
+ 
+    
+        fig, ax = plt.subplots(figsize=(10, 10))
+    
+        ax.set(yscale="log")
+        ax.yaxis.set_major_formatter(\
+                ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
+    
         sns.lineplot(x=t, y=ic, sort=False, linewidth=2)
         sns.scatterplot(t, ic)
-
-    plt.suptitle("Infection curve", fontsize=16, fontweight='bold', color='white')
-    plt.xticks(rotation=0)
-    plt.xlabel('Time [days]')
-    plt.ylabel('Number infected')
-
-    fig.savefig(fplot)
-    plt.close()
-    #}}}
+    
+        plt.suptitle("Infection curve", fontsize=16, fontweight='bold', color='white')
+        plt.xticks(rotation=0)
+        plt.xlabel('Time [days]')
+        plt.ylabel('Number infected')
+    
+        fig.savefig(fplot)
+        plt.close()
+        #}}}
+                            
+    def plt_IC_n(self, t, ics, fplot):
+        #{{{
+        """
+        plt_IC_n()
+        plots the infection curve
+      
+        Args:
+            ic: time series
+            fplot: filename for the plot
+      
+        Raises:
+      
+        Returns:
+            Nothing, just save the plot.
+      
+        """
  
- 
+    
+        fig, ax = plt.subplots(figsize=(10, 10))
+    
+        ax.set(yscale="log")
+        ax.yaxis.set_major_formatter(\
+                ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
+    
+        for ic in ics:
+            sns.lineplot(x=t, y=ic, sort=False, linewidth=2)
+            sns.scatterplot(t, ic)
+    
+        plt.suptitle("Infection curve", fontsize=16, fontweight='bold', color='white')
+        plt.xticks(rotation=0)
+        plt.xlabel('Time [days]')
+        plt.ylabel('Number infected')
+    
+        fig.savefig(fplot)
+        plt.close()
+        #}}}
+     
+     #}}}
+     
 
 
-# TRY graphs
 
-# https://www.python-course.eu/graphs_python.php
-# https://www.bogotobogo.com/python/python_graph_data_structures.php
-# https://networkx.github.io/documentation/stable/auto_examples/drawing/plot_weighted_graph.html
+

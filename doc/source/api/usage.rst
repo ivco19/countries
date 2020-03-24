@@ -27,7 +27,7 @@ Prerequisites
 Notebooks
 ---------
 
-Hasta ahora hay dos notebooks que son mas que nada exploratorios de los datos compilados por `Johns Hopkins CSSE<https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30120-1/fulltext>`_
+Hasta ahora hay dos notebooks que son mas que nada exploratorios de los datos compilados por `Johns Hopkins CSSE <https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30120-1/fulltext>`_
 
 world.ipynb:
    carga datos de la poblacion y area de los paises para construir una tabla con esos dos datos.  Luego se usará para normalizar las curvas de contagio de los diferentes países.
@@ -68,21 +68,21 @@ pop_area.csv:
 Data is stored in the *dat* directory.
 
 
-=========================================  =================================================
- filename                                   contents
-=========================================  =================================================
-covid_df.csv                              Covid-19 world data
-pop_area.csv                              Population of countries
-table-1.csv                               
+===============================  ===============================
+ filename                         contents
+===============================  ===============================
+covid_df.csv                     Covid-19 world data
+pop_area.csv                     Population of countries
+table-1.csv                     
 table-2.csv
-table_age.csv                             Age distribution table
+table_age.csv                    Age distribution table
 table_clean.csv
-table_population_cordoba.csv              Age distribution in Cordoba
+table_population_cordoba.csv     Age distribution in Cordoba
 table_population_world.csv
 world.ods
 world_area.csv
 world_population.csv
-=========================================  =================================================
+===============================  ===============================
 
 
 
@@ -198,13 +198,57 @@ Configuration files
 
 
 
-Interactive usage
-=================
+Command line usage
+==================
 
 For a simple test, go to src and run:
 
 .. code-block::
 
    $ python experiment.py ../set/config.ini
+
+
+API usage
+==================
+
+To use functionalities, import the :class:`cv19` module:
+
+.. code-block:: python
+
+   import cv19
+
+
+First, we must parse the configuration parameters from the .ini file.
+
+All parameters with an assigned value must be read with the 
+`configparser <https://docs.python.org/3/library/configparser.html>`_
+module.   The ConfigParser class is inherited in :class:`cv19.parser`.
+
+Variables can be accessed using the names of the sections and the
+names of the fields.  For example, conf['clinical']['bed_stay'].
+
+
+
+.. code-block:: python
+
+   conf = cv19.parser()
+   conf.check_file(argv)
+   conf.read_config_file()
+   conf.load_filenames()
+   conf.load_parameters()
+
+
+
+Finally, the simulation is made with the :class:`cv19.InfectionCurve`
+class, where the function :meth:`cv19.InfectionCurve.compute` makes
+the computations.
+
+
+.. code-block:: python
+
+   c = cv19.InfectionCurve()
+   t, I = c.compute(conf.p)
+   c.plt_IC_n(t, [I], conf.filenames.fname_infected)    
+
 
 

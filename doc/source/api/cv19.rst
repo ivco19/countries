@@ -1,4 +1,4 @@
-PixelSky module
+CV19 module
 ===============
 
 .. automodule:: cv19

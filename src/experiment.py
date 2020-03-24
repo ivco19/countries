@@ -7,25 +7,20 @@ import cv19
 #___________________________________
 # Load settings
 
-from configparser import ConfigParser
-filename = cv19.check_file(argv)
-config = ConfigParser()
-config.read(filename)
+conf = cv19.parser()
+conf.check_file(argv)
+conf.read_config_file()
+conf.load_filenames()
+conf.load_parameters()
 
 #___________________________________
 # Prepare experiment
 
+c = cv19.InfectionCurve()
 
-p = cv19.load_parameters(config._sections)
+t, I = c.compute(conf.p)
 
-#t, I, C = cv19.InfectionCurve_full(p)
-cv19.InfectionCurve_full(p)
-
-#fn = cv19.load_filenames(config._sections)
-
-#cv19.plt_IC_n(t, [I, C], fn.fname_infected)
-
-
+c.plt_IC_n(t, [I], conf.filenames.fname_infected)
 
 
 

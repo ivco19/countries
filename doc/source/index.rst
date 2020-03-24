@@ -1,19 +1,59 @@
-.. covid_iate documentation master file, created by
-   sphinx-quickstart on Tue Mar 24 13:57:10 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Documentation for IATE COVID
 
-Welcome to covid_iate's documentation!
-======================================
+################################################
+IATE VS COVID: Countries repo
+################################################
+ 
+El propósito de este proyecto es:
+
+ 
+Autores:
+
+
+
+A python virtual environment is suggested to work with this project.
+Requirements are listed in the project home directory file:
+``requirements.txt``.
+
+
+
+
+***************
+Science case
+***************
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+
+   sci/proposal
+   sci/references
+
+***************
+Getting Started
+***************
+
+.. toctree::
+   :maxdepth: 2
+
+   api/gettingstarted
+   api/usage
+
+***********************
+Developer Documentation
+***********************
+
+.. toctree::
+   :maxdepth: 2
+
+   api/todo
+   api/testing
+   api/documenting
+   api/cv19
 
 
-
+******************
 Indices and tables
-==================
+******************
 
 * :ref:`genindex`
 * :ref:`modindex`
