@@ -7,17 +7,11 @@ from configparser import ConfigParser
 
 
 class parser(ConfigParser):
-    #{{{
-    
-#    def __init__(self):
-#        """
-#        init a parsing object
-#        """
-#        self = ConfigParser() 
-#        self.filename = ''
-        
+    """
+    parser class
+    manipulation of parser from ini files
+    """
     def check_file(self, sys_args):
-        #{{{
         '''
         chek_file(args): 
         Parse paramenters for the simulation from a .ini file
@@ -29,7 +23,6 @@ class parser(ConfigParser):
 
         Returns:
             readmap: a healpix map, class ?
-        
         ''' 
 
         import sys
@@ -54,10 +47,8 @@ class parser(ConfigParser):
             filename = '../set/config.ini'
     
         self.filename = filename
-        #}}}
     
     def read_config_file(self):
-        #{{{
         '''
         chek_file(args): 
         Parse paramenters for the simulation from a .ini file
@@ -69,7 +60,6 @@ class parser(ConfigParser):
 
         Returns:
             readmap: a healpix map, class ?
-        
         ''' 
 
         import sys
@@ -77,10 +67,7 @@ class parser(ConfigParser):
     
         self.read(self.filename)
 
-        #}}}
-
     def load_filenames(self):
-        #{{{
         '''
         load_filenames(self): 
         make filenames based on info in config file
@@ -92,7 +79,6 @@ class parser(ConfigParser):
 
         Returns:
             list of filenames
-        
         ''' 
     
         from collections import namedtuple
@@ -138,12 +124,7 @@ class parser(ConfigParser):
     
         self.filenames = res
     
-        #}}}                
-    
-Todos los parámetros a los que se les asigna un valor en el archivo de
-configuración se deben leer usando el módulo 
     def load_parameters(self):
-        #{{{
         '''
         load_parameters(self): 
         load parameters from config file
@@ -170,9 +151,8 @@ configuración se deben leer usando el módulo
         t_max = float(self['experiment']['t_max'])
         dt = float(self['experiment']['dt'])
     
-    
         # Transmision dynamics
-        #-------------------
+        #---------------------
         
         # population
         population = int(self['transmision']['population'])
@@ -217,13 +197,8 @@ configuración se deben leer usando el módulo
     
         self.p = res
     
-        #}}}                
-    
-    #}}}
- 
 
 class table_draw:
-    #{{{
 
     def __init__(self):
         self.size = []
@@ -244,6 +219,12 @@ class table_draw:
         self.p = self.d[y]
         
     def random_gen(self, xinfname, xsupname, yname):
+        """
+        method: random_gen
+           Generates a random sample from a given probability density
+           The probability density must be in the table, in the 
+           table_draw class.
+        """
 
         import sys
         u = random()
@@ -294,11 +275,8 @@ class table_draw:
         df = self.D[['x_inf', 'x_sup','y']]
         df.to_csv(filename)
 
-    #}}}
-
 
 class node:
-    #{{{
     """
     class node
     This class is used to create and manipulated nodes.
@@ -311,7 +289,7 @@ class node:
         self.incoming = {}
 
     def __str__(self):
-        # para que funcione el print
+        # (para que funcione el print)
         string = str(self.id) + ' node, outgoing: ' + \
                  str([x.id for x in self.outgoing]) + \
                  ' incoming: ' + str([x.id for x in self.incoming])
@@ -322,7 +300,7 @@ class node:
         for n, v in zip(names, values):
             self.outgoing[neighbor][n] = v
         #print(neighbor.id, '---->', self)
-        #print(self.id)
+        #print(self.id)  # (for testing purposes)
  
     def be_neighbor(self, neighbor, names, values):
         self.incoming[neighbor] = {}
@@ -338,11 +316,9 @@ class node:
 
     def get_weight(self, neighbor):
         return self.outgoing[neighbor]
-    #}}}
 
 
 class Graph:
-    #{{{
     """
     class Graph
     This class is used to create and manipulated graphs
@@ -537,14 +513,10 @@ class Graph:
             x.append( self.get_edge(a.id, nnode, key) )
         return(x)
 
-    #}}}
-
 
 class InfectionCurve:
-    #{{{
      
     def compute(self, p):
-        #{{{
         '''
         InfectionCurve(self, p): 
         computes the Infection Curve based on a probabilistic model
@@ -686,10 +658,8 @@ class InfectionCurve:
     
     
         return([ts, I])
-        #}}}
     
     def plt_IC(t, ic, fplot):
-        #{{{
         """
         plt_IC()
         plots the infection curve
@@ -722,10 +692,8 @@ class InfectionCurve:
     
         fig.savefig(fplot)
         plt.close()
-        #}}}
                             
     def plt_IC_n(self, t, ics, fplot):
-        #{{{
         """
         plt_IC_n()
         plots the infection curve
@@ -759,11 +727,3 @@ class InfectionCurve:
     
         fig.savefig(fplot)
         plt.close()
-        #}}}
-     
-     #}}}
-     
-
-
-
-
