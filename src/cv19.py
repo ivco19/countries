@@ -654,6 +654,7 @@ class InfectionCurve:
     
             # ((  I ))
             prob_II = g.get_edge('I', 'I', 'prob')
+            lag_II = g.get_edge('I', 'I', 'prob')
 
             n_I = I[-1] + I[-1] * prob_II * p.dt - \
                   C[-1] * prob_II * p.dt
