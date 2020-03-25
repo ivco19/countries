@@ -90,6 +90,39 @@ trnasición :math:`I \rightarrow C`.
 
     I(t+dt) = I(t) + I(t) * R * dt - C(t) * P(C|I, t) * dt
 
+
+En general, dada una variable :math:`V`, su variación se incrementa
+por todas las variables :math:`U` que tienen transiciones 
+:math:`U \rightarrow V` y disminuye por 
+todas las variables :math:`W` que tienen transiciones 
+:math:`I \rightarrow W`.
+
+.. math::
+
+    V(t+dt, q) = V(t, q) + \sum_i U(t, q) \cdot P(V|U, q) \cdot dt -
+                 \sum_i W(t, q) \cdot P(V|W, q) \cdot dt
+
+Por ejemplo, si tenemos un grafo como este:
+
+.. image:: ../images/in_out.svg 
+    :target: ../images/in_out.svg
+    :width: 300 px                
+    :align: center                
+
+La variacion del nodo V está dada por:
+
+.. math::
+
+    V(t+dt, q) = V(t, q) + U_1(t, q) \cdot P(V|U_1, q) \cdot dt +\\
+                         + U_2(t, q) \cdot P(V|U_2, q) \cdot dt +\\
+                         + U_3(t, q) \cdot P(V|U_3, q) \cdot dt -\\
+                         - W_1(t, q) \cdot P(W_1,V, q) \cdot dt -\\ 
+                         - W_2(t, q) \cdot P(W_2,V, q) \cdot dt  
+
+Aquí por ejemplo :math:`P(V|U_1, q)` significa probabilidad de que
+haya una transición del estado :math:`U_1` al estado :math:`V`.
+                         
+
 Teniendo en cuenta que:
 
 - los parámetros parseados del archivo .ini están en la lista de parámetros p,
@@ -135,6 +168,44 @@ resulta el código para llevar la cuenta de I así:
 
 Versión probabilística
 ======================
+
+En la version probabilística, los cambios en los valores de los
+estados dependen de las características de la población en esos
+estados.  Por ejemplo, las transiciones :math:`B \rightarrow U`
+dependen de la edad de los pacientes.  El modelo anterior se puede 
+extender para una versión probabilística de la siguiente forma:
+
+
+.. math::
+
+    V(t+dt, q) = V(t, q) + \sum_i U(t, q) \cdot P(V|U, q) \cdot dt -
+                 \sum_i W(t, q) \cdot P(V|W, q) \cdot dt
+
+
+Tabulaciones de las distribuciones de probabilidad
+==================================================
+
+
+
+Tasas de mortalidad como función de la edad
+-------------------------------------------
+
+
+
+Distribución de la edad poblacional
+-------------------------------------------
+
+
+Tiempos de permanencia en UTI como función de la edad
+-----------------------------------------------------
+
+etc. ...
+
+
+
+
+
+
 
 
 
