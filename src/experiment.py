@@ -18,9 +18,9 @@ conf.load_parameters()
 
 c = cv19.InfectionCurve()
 
-t, I = c.compute(conf.p)
+t, I, C, R = c.compute(conf.p)
 
-c.plt_IC_n(t, [I], conf.filenames.fname_infected)
+#c.plt_IC_n(t, [I, C, R], conf.filenames.fname_infected)
 
 
 

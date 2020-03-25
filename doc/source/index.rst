@@ -45,10 +45,11 @@ Developer Documentation
 .. toctree::
    :maxdepth: 2
 
+   api/model
+   api/cv19
    api/todo
    api/testing
    api/documenting
-   api/cv19
 
 
 ******************

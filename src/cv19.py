@@ -512,9 +512,17 @@ class Graph:
             a = self.get_node(v)
             x.append( self.get_edge(a.id, nnode, key) )
         return(x)
+        # idea:
+        # activation of all nodes
+        # v = g.get_node('I')
+        #prob = g.node_activation('I', 'prob')[0]
+        #lag = g.node_activation('I', 'lag')[0]
 
 
 class InfectionCurve:
+
+    # see:
+    # http://epirecip.es/epicookbook/chapters/sir-stochastic-discretestate-discretetime/python
      
     def compute(self, p):
         '''
@@ -616,6 +624,7 @@ class InfectionCurve:
         g.add_edge('C', 'H', nms, [f_CH, T_CH])
         g.add_edge('C', 'B', nms, [f_CB, T_CB])
         g.add_edge('C', 'U', nms, [f_CU, T_CU])
+        g.add_edge('C', 'R', nms, [f_CR, T_CR])
     
         g.add_edge('H', 'B', nms, [f_HB, T_HB])
         g.add_edge('H', 'U', nms, [f_HU, T_HU])
@@ -643,21 +652,66 @@ class InfectionCurve:
             t = t + p.dt
             ts.append(t)
     
-            # activation of all nodes
-            v = g.get_node('I')
-            prob = g.node_activation('I', 'prob')[0]
-            lag = g.node_activation('I', 'lag')[0]
-    
-            ilag = -lag if lag < len(I) else 1
-            n_I = I[-1] + I[ilag] * prob * p.dt
+            # ((  I ))
+            prob_II = g.get_edge('I', 'I', 'prob')
+
+            n_I = I[-1] + I[-1] * prob_II * p.dt - \
+                  C[-1] * prob_II * p.dt
             I.append(n_I)
+
+            # ((  C ))
+            prob = g.get_edge('I', 'C', 'prob')
+            lag = g.get_edge('I', 'C', 'lag')
+            update = I[-lag] if lag < len(I) else 0.
+            n_C = I[-1] + update * prob * p.dt
+            C.append(n_C)
+
+            # ((  H ))
+            prob = g.get_edge('I', 'C', 'prob')
+            lag = g.get_edge('I', 'C', 'lag')
+            update = I[-lag] if lag < len(I) else 0.
+            n_C = I[-1] + update * prob * p.dt
+            C.append(n_C)
+
+            # ((  B ))
+            prob = g.get_edge('I', 'C', 'prob')
+            lag = g.get_edge('I', 'C', 'lag')
+            update = I[-lag] if lag < len(I) else 0.
+            n_C = I[-1] + update * prob * p.dt
+            C.append(n_C)
+
+            # ((  U ))
+            prob = g.get_edge('I', 'C', 'prob')
+            lag = g.get_edge('I', 'C', 'lag')
+            update = I[-lag] if lag < len(I) else 0.
+            n_C = I[-1] + update * prob * p.dt
+            C.append(n_C)
+
+            # ((  R ))
+            prob = g.get_edge('C', 'R', 'prob')
+            lag = g.get_edge('C', 'R', 'lag')
+            update = C[-lag] if lag < len(C) else 0.
+            n_R = I[-1] + update * prob * p.dt
+            R.append(n_R)
+
+            # ((  D ))
+            prob = g.get_edge('I', 'C', 'prob')
+            lag = g.get_edge('I', 'C', 'lag')
+            update = I[-lag] if lag < len(I) else 0.
+            n_C = I[-1] + update * prob * p.dt
+            C.append(n_C)
+
+
+
+
+            R = I
+            C = I
     
             #### TO DO:
             # completar las demas variables (nodos)
             # ver si se puede escribir por comprension
     
-    
-        return([ts, I])
+        return([ts, I, C, R])
     
     def plt_IC(t, ic, fplot):
         """
@@ -709,21 +763,32 @@ class InfectionCurve:
       
         """
  
+        plt.rcParams['savefig.facecolor'] = "0.8"
+        fig, ax = plt.subplots(1, 2, figsize=(20, 10))
     
-        fig, ax = plt.subplots(figsize=(10, 10))
-    
-        ax.set(yscale="log")
-        ax.yaxis.set_major_formatter(\
+        #---
+        for ic in ics:
+            sns.lineplot(x=t, y=ic, sort=False, linewidth=4, ax=ax[0])
+            sns.scatterplot(t, ic, ax=ax[0])
+
+        ax[0].set_xlabel('Time [days]', fontsize=22)
+        ax[0].set_ylabel('Number infected', fontsize=22)
+        #---
+        ax[1].set(yscale="log")
+        ax[1].yaxis.set_major_formatter(\
                 ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
     
         for ic in ics:
-            sns.lineplot(x=t, y=ic, sort=False, linewidth=2)
-            sns.scatterplot(t, ic)
-    
-        plt.suptitle("Infection curve", fontsize=16, fontweight='bold', color='white')
-        plt.xticks(rotation=0)
-        plt.xlabel('Time [days]')
-        plt.ylabel('Number infected')
-    
+            sns.lineplot(x=t, y=ic, sort=False, linewidth=2, ax=ax[1])
+            sns.scatterplot(t, ic, ax=ax[1])
+        ax[1].set_xlabel('Time [days]', fontsize=22)
+        ax[1].set_ylabel('Number infected', fontsize=22)
+        #---
+        #plt.suptitle("Infection curve", fontsize=36,
+        #        fontweight='bold', color='blue')
+        plt.xticks(rotation=0, fontsize=22)
+        plt.yticks(rotation=90, fontsize=22)
+
+        plt.tight_layout()
         fig.savefig(fplot)
         plt.close()
