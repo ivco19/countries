@@ -18,9 +18,13 @@ conf.load_parameters()
 
 c = cv19.InfectionCurve()
 
-t, I, C, R = c.compute(conf.p)
+c.compute_tst(conf.p)
+
+#t, I, C, R = c.compute(conf.p)
 
 #c.plt_IC_n(t, [I, C, R], conf.filenames.fname_infected)
 
 
 
+
+# https://towardsdatascience.com/covid-19-infection-in-italy-mathematical-models-and-predictions-7784b4d7dd8d

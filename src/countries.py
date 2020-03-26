@@ -92,9 +92,3 @@ def plt_1country(df, country_name):
 df_arg = countries(df_countries, 'Argentina')
 
 plt_1country(df_arg, 'argentina')
-
-
-
-
-
-

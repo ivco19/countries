@@ -196,6 +196,85 @@ Las transiciones son:
 | D        | U              |                | 
 +----------+----------------+----------------+
 
+Para este modelo, la actualización de un paso temporal para I es:
+
+
+.. math::
+
+    I(t+dt) = I(t) + I(t-\tau_{II}) \cdot P(I|I) \cdot dt -
+               C(t-\tau_{IC}) \cdot P(C|I) \cdot dt
+
+donde :math:`\tau_{II}` es el time lag para la transición 
+:math:`I \rightarrow I`, y
+:math:`\tau_{IC}` es el time lag para la transición 
+:math:`I \rightarrow C`.  Los valores P son las probabilidades de
+transición, es decir, :math:`P(C(t)|I(t-\tau_{IC}))` es la probabilidad de que un
+individuo pase al estado C en el tiempo t si estaba en el estado I en
+el tiempo :math:`t-\tau_{IC}`.  Por supuesto, :math:`P(I(t)|I(t-\tau_{II}))`
+es la probabilidad de permanecer en el estado I durante el tiempo
+:math:`\tau_{II}`.
+
+
+
+Para el contador de "confirmados", C, tenemos que:
+
+.. math::
+    :nowrap:
+
+    \begin{eqnarray}
+    C(t+dt) = C(t)  &+& I(t-t_{CC}) \cdot P(C(t)|I(t-\tau_{IC}) \cdot dt -\\
+            &-&  C(t-\tau_{CH}) \cdot P(H(t)|C(t-\tau_{CH}) \cdot dt - \\
+            &-&  C(t-\tau_{CB}) \cdot P(B(t)|C(t-\tau_{CB}) \cdot dt - \\
+            &-&  C(t-\tau_{CU}) \cdot P(U(t)|C(t-\tau_{CU}) \cdot dt 
+    \end{eqnarray}
+
+
+porque sólo se puede llegar al estado C desde el estado I, y se puede
+pasar desde el estado C a los estados H, B o U con diferentes
+probabilidades.  Los tiempos de retardo desde C son cero, porque se
+pueden pensar a los estados H, B y U como subestados de C, es decir, 
+
+
+.. math::
+
+   C = H + B + U
+
+De la misma forma, para las transiciones 
+:math:`B \rightarrow H`, 
+:math:`B \rightarrow U`, 
+:math:`H \rightarrow R`, 
+:math:`H \rightarrow B`, 
+:math:`H \rightarrow U`, 
+:math:`U \rightarrow H`, 
+:math:`U \rightarrow B` y
+:math:`U \rightarrow D`, tenemos las siguientes relaciones:
+
+
+.. math::
+    :nowrap:
+
+    \begin{eqnarray}
+    B(t+dt) = B(t)  &+& C(t-t_{BB}) \cdot P(B(t)|C(t-\tau_{CB}) \cdot dt +\\
+            &+&  H(t-\tau_{HB}) \cdot P(B(t)|C(t-\tau_{HB}) \cdot dt + \\
+            &+&  U(t-\tau_{UB}) \cdot P(B(t)|C(t-\tau_{UB}) \cdot dt - \\
+            &-&  U(t-\tau_{UB}) \cdot P(U(t)|B(t-\tau_{UB}) \cdot dt 
+    \end{eqnarray}
+
+
+y análogamente para los otros nodos.  Como se puede ver, hay una
+estructura que persiste en todos los casos, y se puede escribir de
+manera general.  Para un nodo V, la variación en un paso temporal está
+dada por:
+
+.. math::
+    :nowrap:
+
+    \begin{eqnarray}
+    V(t+dt) = V(t)  &+& \sum_{i \in incoming} W_i(t-\tau_{}) \cdot P(V(t)|W_i(t-\tau_{W_i\,V}) \cdot dt  -  \\
+                    &-& \sum_{i \in outgoing} V(t) \cdot P(W_i(t)|V(t-\tau_{VW_i}) \cdot dt
+    \end{eqnarray}
+
+
 
 
 

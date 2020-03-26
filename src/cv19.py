@@ -196,7 +196,7 @@ class parser(ConfigParser):
               t_incubation, t_infectious)
     
         self.p = res
-    
+
 
 class table_draw:
 
@@ -361,7 +361,7 @@ class Graph:
     get_node()
     get_node_value()
     set_node()
-    get_vertices()
+    get_node_ids()
     get_nodes_to()
     get_nodes_from()
 
@@ -447,8 +447,10 @@ class Graph:
         else:
             return None
 
-    def get_vertices(self):
-        return self.vert_dict.keys()
+    def get_node_ids(self):
+        keys = self.vert_dict.keys()
+        l = list(keys)
+        return(l)
 
     def get_nodes_to(self, nnode):
         v = self.get_node(nnode)
@@ -496,13 +498,21 @@ class Graph:
 
  
     # graph functions --------------------------------------
-    def show(self):
+    def show_weights(self):
         for v in self:
             print('NODE %s:  %f' % (v.id, v.value))
             for w in v.get_connections():
                 vid = v.get_id()
                 wid = w.get_id()
                 print ('             %s -> %s %s' % (vid, wid, v.get_weight(w)))
+
+    def show_connections(self):
+        node_list = self.get_node_ids()
+        for inode in node_list:
+            print('nodes from %s: ' % inode, end='')
+            print(self.get_nodes_from(inode))
+            print('\nnodes to %s: ' % inode, end='')
+            print(self.get_nodes_to(inode))
 
     # computation functions --------------------------------
     def node_activation(self, nnode, key):
@@ -517,6 +527,30 @@ class Graph:
         # v = g.get_node('I')
         #prob = g.node_activation('I', 'prob')[0]
         #lag = g.node_activation('I', 'lag')[0]
+
+    def node_upgrade(self, nnode, key):
+        l = self.get_nodes_to(nnode)
+        x = []
+        for v in l:
+            a = self.get_node(v)
+            x.append( self.get_edge(a.id, nnode, key) )
+        return(x)
+
+
+    def node_activation(self, nnode, key):
+        l = self.get_nodes_to(nnode)
+        x = []
+        for v in l:
+            a = self.get_node(v)
+            x.append( self.get_edge(a.id, nnode, key) )
+        return(x)
+        # idea:
+        # activation of all nodes
+        # v = g.get_node('I')
+        #prob = g.node_activation('I', 'prob')[0]
+        #lag = g.node_activation('I', 'lag')[0]
+
+
 
 
 class InfectionCurve:
@@ -714,6 +748,305 @@ class InfectionCurve:
     
         return([ts, I, C, R])
     
+    def model_SIR():
+        g = Graph()
+    
+        for node in ['S','I','R']:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        I = [g.get_node_value('I')] # Infected
+        R = [g.get_node_value('R')] # Recovered                    
+        S = [g.get_node_value('S')] # Susceptible
+    
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        # delay times (number in units of days!)
+        # delay times are set in number of time steps
+        T_IC = int(5. /p_dt)   # incubation time (from infection to synthoms)
+    
+        T_CH = 0
+        T_CB = 0
+        T_CU = 0
+        T_CD = 0
+    
+        T_HB = int(10./p_dt)   # time from synthoms to hospitalization (Bed)
+        T_HU = int(10./p_dt)   # time from synthoms to hospitalization (ICU)
+        T_HR = int(11./p_dt)   # Recovery time for mild cases
+        T_HD = int(10./p_dt)   # Time length for death at home
+    
+        T_BH = int(10./p_dt)   # Stay in hospital until give away
+        T_BU = int(10./p_dt)   # Stay in hospital until transference to ICU
+        T_BR = int(15./p_dt)   # Length of hospital (ICU) stay              
+        T_BD = int(20./p_dt)   # Time in hospital until dead (without ICU)
+    
+        T_UB = int(10./p_dt)   # Time in ICU until transference to bed
+        T_UH = int(28./p_dt)   # stay in ICU stay until give away
+        T_UR = int(28./p_dt)   # Length of hospital (ICU) stay until recovered 
+        T_UD = int(28./p_dt)   # Stay in ICU until death
+    
+        # fractions for transitions
+        f_IC = 0.95   # probability an infected person gets sick
+    
+        f_CH = 0.95   # probability of a domiciliary confirmation
+        f_CB = 0.05   # probability of a confirmation in health system
+        f_CU = 0.00   # probability of a confirmation in ICU
+        f_CD = 1. - f_CH - f_CB - f_CU   # probability of a confirmation in autopsy
+                    
+        f_HB = 0.1    # probability of hospitalization
+        f_HU = 0.     # probability of emergency hospitalization
+        f_HR = 0.9    # probability of recovery at home
+        f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
+                   
+        f_BH = 0.0    # probability of give away before recovery
+        f_BU = 0.2    # probability of transference to ICU
+        f_BR = 0.8    # probability of recovery in hospital
+        f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
+    
+        f_UB = 0.6     # probability of transference from ICU to common bed
+        f_UH = 0.0     # probability of give away from ICU
+        f_UR = 0.0     # probability of recovery from ICU
+        f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
+                                                                        
+    
+        g.add_edge('I', 'I', nms, [p.R,  0])
+        
+        g.add_edge('S', 'I', nms, [f_IC, T_IC])
+    
+        g.add_edge('I', 'R', nms, [f_CH, T_CH])
+    
+        #g.show_weights()
+        #g.show_connections()
+        t = 0.
+        time_steps = 0
+    
+        while t < p.t_max:
+    
+            time_steps = time_steps + 1
+    
+            t_prev = t
+            t = t + p.dt
+            ts.append(t)
+    
+            prob_II = g.get_edge('I', 'I', 'prob')
+            lag_II = g.get_edge('I', 'I', 'prob')
+
+            n_I = I[-1] + \
+                  I[-1] * S[-1] * dt - \
+                  I[-1]
+
+            I.append(n_I)
+
+
+
+
+
+    def model_SEIR():
+        g = Graph()
+    
+        for node in ['I','C','R','H','B','U','D',]:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        I = [g.get_node_value('I')] # Infected
+        C = [g.get_node_value('C')] # Confirmed                    
+        R = [g.get_node_value('R')] # Recovered                    
+        H = [g.get_node_value('H')] # sick at Home                 
+        B = [g.get_node_value('B')] # sick in Bed in Health System 
+        U = [g.get_node_value('U')] # sick in Intensive Care Unit  
+        D = [g.get_node_value('D')] # dead by virus                
+    
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        # delay times (number in units of days!)
+        # delay times are set in number of time steps
+        T_IC = int(5. /p_dt)   # incubation time (from infection to synthoms)
+    
+        T_CH = 0
+        T_CB = 0
+        T_CU = 0
+        T_CD = 0
+    
+        T_HB = int(10./p_dt)   # time from synthoms to hospitalization (Bed)
+        T_HU = int(10./p_dt)   # time from synthoms to hospitalization (ICU)
+        T_HR = int(11./p_dt)   # Recovery time for mild cases
+        T_HD = int(10./p_dt)   # Time length for death at home
+    
+        T_BH = int(10./p_dt)   # Stay in hospital until give away
+        T_BU = int(10./p_dt)   # Stay in hospital until transference to ICU
+        T_BR = int(15./p_dt)   # Length of hospital (ICU) stay              
+        T_BD = int(20./p_dt)   # Time in hospital until dead (without ICU)
+    
+        T_UB = int(10./p_dt)   # Time in ICU until transference to bed
+        T_UH = int(28./p_dt)   # stay in ICU stay until give away
+        T_UR = int(28./p_dt)   # Length of hospital (ICU) stay until recovered 
+        T_UD = int(28./p_dt)   # Stay in ICU until death
+    
+        # fractions for transitions
+        f_IC = 0.95   # probability an infected person gets sick
+    
+        f_CH = 0.95   # probability of a domiciliary confirmation
+        f_CB = 0.05   # probability of a confirmation in health system
+        f_CU = 0.00   # probability of a confirmation in ICU
+        f_CD = 1. - f_CH - f_CB - f_CU   # probability of a confirmation in autopsy
+                    
+        f_HB = 0.1    # probability of hospitalization
+        f_HU = 0.     # probability of emergency hospitalization
+        f_HR = 0.9    # probability of recovery at home
+        f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
+                   
+        f_BH = 0.0    # probability of give away before recovery
+        f_BU = 0.2    # probability of transference to ICU
+        f_BR = 0.8    # probability of recovery in hospital
+        f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
+    
+        f_UB = 0.6     # probability of transference from ICU to common bed
+        f_UH = 0.0     # probability of give away from ICU
+        f_UR = 0.0     # probability of recovery from ICU
+        f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
+                                                                        
+    
+        g.add_edge('I', 'I', nms, [p.R,  0])
+        
+        g.add_edge('I', 'C', nms, [f_IC, T_IC])
+    
+        g.add_edge('C', 'H', nms, [f_CH, T_CH])
+        g.add_edge('C', 'B', nms, [f_CB, T_CB])
+        g.add_edge('C', 'U', nms, [f_CU, T_CU])
+    
+        g.add_edge('H', 'B', nms, [f_HB, T_HB])
+        g.add_edge('H', 'U', nms, [f_HU, T_HU])
+        g.add_edge('H', 'R', nms, [f_HR, T_HR])
+        g.add_edge('H', 'D', nms, [f_HD, T_HD])
+    
+        g.add_edge('B', 'H', nms, [f_BH, T_BH])
+        g.add_edge('B', 'U', nms, [f_BU, T_BU])
+        g.add_edge('B', 'R', nms, [f_BR, T_BR])
+        g.add_edge('B', 'D', nms, [f_BD, T_BD])
+    
+        g.add_edge('U', 'B', nms, [f_UB, T_UB])
+        g.add_edge('U', 'H', nms, [f_UH, T_UH])
+        g.add_edge('U', 'R', nms, [f_UR, T_UR])
+        g.add_edge('U', 'D', nms, [f_UD, T_UD])
+
+        #g.show_weights()
+        #g.show_connections()
+
+
+
+    def model_full_mean():
+        g = Graph()
+    
+        for node in ['I','C','R','H','B','U','D',]:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        I = [g.get_node_value('I')] # Infected
+        C = [g.get_node_value('C')] # Confirmed                    
+        R = [g.get_node_value('R')] # Recovered                    
+        H = [g.get_node_value('H')] # sick at Home                 
+        B = [g.get_node_value('B')] # sick in Bed in Health System 
+        U = [g.get_node_value('U')] # sick in Intensive Care Unit  
+        D = [g.get_node_value('D')] # dead by virus                
+    
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        # delay times (number in units of days!)
+        # delay times are set in number of time steps
+        T_IC = int(5. /p_dt)   # incubation time (from infection to synthoms)
+    
+        T_CH = 0
+        T_CB = 0
+        T_CU = 0
+        T_CD = 0
+    
+        T_HB = int(10./p_dt)   # time from synthoms to hospitalization (Bed)
+        T_HU = int(10./p_dt)   # time from synthoms to hospitalization (ICU)
+        T_HR = int(11./p_dt)   # Recovery time for mild cases
+        T_HD = int(10./p_dt)   # Time length for death at home
+    
+        T_BH = int(10./p_dt)   # Stay in hospital until give away
+        T_BU = int(10./p_dt)   # Stay in hospital until transference to ICU
+        T_BR = int(15./p_dt)   # Length of hospital (ICU) stay              
+        T_BD = int(20./p_dt)   # Time in hospital until dead (without ICU)
+    
+        T_UB = int(10./p_dt)   # Time in ICU until transference to bed
+        T_UH = int(28./p_dt)   # stay in ICU stay until give away
+        T_UR = int(28./p_dt)   # Length of hospital (ICU) stay until recovered 
+        T_UD = int(28./p_dt)   # Stay in ICU until death
+    
+        # fractions for transitions
+        f_IC = 0.95   # probability an infected person gets sick
+    
+        f_CH = 0.95   # probability of a domiciliary confirmation
+        f_CB = 0.05   # probability of a confirmation in health system
+        f_CU = 0.00   # probability of a confirmation in ICU
+        f_CD = 1. - f_CH - f_CB - f_CU   # probability of a confirmation in autopsy
+                    
+        f_HB = 0.1    # probability of hospitalization
+        f_HU = 0.     # probability of emergency hospitalization
+        f_HR = 0.9    # probability of recovery at home
+        f_HD = 1. - f_HB - f_HU - f_HR  # probability of death in home
+                   
+        f_BH = 0.0    # probability of give away before recovery
+        f_BU = 0.2    # probability of transference to ICU
+        f_BR = 0.8    # probability of recovery in hospital
+        f_BD = 1. - f_BH - f_BU - f_BR  # probability of death in common bed
+    
+        f_UB = 0.6     # probability of transference from ICU to common bed
+        f_UH = 0.0     # probability of give away from ICU
+        f_UR = 0.0     # probability of recovery from ICU
+        f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
+                                                                        
+    
+        g.add_edge('I', 'I', nms, [p.R,  0])
+        
+        g.add_edge('I', 'C', nms, [f_IC, T_IC])
+    
+        g.add_edge('C', 'H', nms, [f_CH, T_CH])
+        g.add_edge('C', 'B', nms, [f_CB, T_CB])
+        g.add_edge('C', 'U', nms, [f_CU, T_CU])
+    
+        g.add_edge('H', 'B', nms, [f_HB, T_HB])
+        g.add_edge('H', 'U', nms, [f_HU, T_HU])
+        g.add_edge('H', 'R', nms, [f_HR, T_HR])
+        g.add_edge('H', 'D', nms, [f_HD, T_HD])
+    
+        g.add_edge('B', 'H', nms, [f_BH, T_BH])
+        g.add_edge('B', 'U', nms, [f_BU, T_BU])
+        g.add_edge('B', 'R', nms, [f_BR, T_BR])
+        g.add_edge('B', 'D', nms, [f_BD, T_BD])
+    
+        g.add_edge('U', 'B', nms, [f_UB, T_UB])
+        g.add_edge('U', 'H', nms, [f_UH, T_UH])
+        g.add_edge('U', 'R', nms, [f_UR, T_UR])
+        g.add_edge('U', 'D', nms, [f_UD, T_UD])
+
+        #g.show_weights()
+        #g.show_connections()
+
+ 
+
+    def compute_tst(self, p):
+    
+       
+
+
+
+
+
     def plt_IC(t, ic, fplot):
         """
         plt_IC()
