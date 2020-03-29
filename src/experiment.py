@@ -18,12 +18,20 @@ conf.load_parameters()
 
 c = cv19.InfectionCurve()
 
-t, I, C, R = c.model_SIR(conf.p)
+# Modelo simple SIR, anda:
+# t, I, C, R = c.model_SIR(conf.p)
+# lbls = ['I','C','R']
+# c.plt_IC_n(t, [I, C, R], labels=lbls, fplot=conf.filenames.fname_infected)
 
-#t, I, C, R = c.compute(conf.p)
 
-lbls = ['I','C','R']
-c.plt_IC_n(t, [I, C, R], labels=lbls, fplot=conf.filenames.fname_infected)
+
+# Modelo simple SEIR:
+t, S, E, I, R = c.model_SEIR(conf.p)
+lbls = ['S','E','I','R']
+c.plt_IC_n(t, [S, E, I, R], labels=lbls, fplot=conf.filenames.fname_infected)
+
+
+
 
 
 

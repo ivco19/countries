@@ -541,8 +541,295 @@ class InfectionCurve:
 
     # see:
     # http://epirecip.es/epicookbook/chapters/sir-stochastic-discretestate-discretetime/python
+        
+    def model_SIR(self, p):
+        """
+        method: model_SIR(parameters)
+
+        This function implements a SIR model without vital dynamics
+        under the assumption of a closed population.
+        Recovered individuals become immune for ever.
+        In this model exposed individuals become instantly infectious,
+        i.e., there is no latency period like in the SEIR model.
      
-    def compute(self, p):
+        Parameters
+        ----------
+           p: parameters containing transition probabilities
+              population number
+
+        Returns
+        -------
+           value: Time series for S, I and R
+        """
+        #{{{
+        g = Graph()
+    
+        for node in ['I','C','R','H','B','U','D',]:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        I = [g.get_node_value('I')] # Infected
+        C = [g.get_node_value('C')] # Confirmed                    
+        R = [g.get_node_value('R')] # Recovered                    
+    
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        
+        # En este modelo todos los infectados se confirman a los 10
+        # dias y se curan a los 20 dias de confirmados
+        T_IC = int(p.t_incubation/ p.dt)
+        T_CR = 20
+        f_IC = 1.
+        f_CR = 1.
+    
+        g.add_edge('I', 'I', nms, [p.R,  0])
+        g.add_edge('I', 'C', nms, [f_IC, T_IC])
+        g.add_edge('C', 'R', nms, [f_CR, T_CR])
+    
+        t = 0.
+        time_steps = 0
+    
+        while t < p.t_max:
+    
+            time_steps = time_steps + 1
+    
+            t_prev = t
+            t = t + p.dt
+            ts.append(t)
+    
+            # (( I ))
+            prob_II = g.get_edge('I', 'I', 'prob')
+            lag_II = g.get_edge('I', 'I', 'lag')
+            update_II = I[-lag_II] if lag_II < len(I) else 0.
+
+            prob_IC = g.get_edge('I', 'C', 'prob')
+            lag_IC = g.get_edge('I', 'C', 'lag')
+            update_IC = I[-lag_IC] if lag_IC < len(I) else 0.
+
+            n_I = min(I[-1] + I[-1] * prob_II * p.dt, p.population) - \
+                  update_IC * prob_IC * p.dt 
+            n_I = max(n_I, 0)
+
+            I.append(n_I)
+
+            # (( C ))
+            prob_CR = g.get_edge('C', 'R', 'prob')
+            lag_CR = g.get_edge('C', 'R', 'lag')
+            update_CR = C[-lag_CR] if lag_CR < len(C) else 0.
+
+            n_C = min(C[-1] + update_IC * prob_IC * p.dt, p.population) - \
+                  update_CR * prob_CR * p.dt
+            n_C = max(n_C, 0)
+            C.append(n_C)
+
+            # (( R ))
+            n_R = min(R[-1] + update_CR * prob_CR * p.dt, p.population) # recuperados nuevos
+            n_R = max(n_R, 0)
+            R.append(n_R)
+ 
+        return([ts, I, C, R])
+        #}}}
+
+    def model_SEIR(self, p):
+        """
+        method: model_SEIR(parameters)
+
+        This function implements a SEIR model without vital dynamics
+        under the assumption of a closed population.
+        Recovered individuals become immune for ever.
+        ref.: https://www.idmod.org/docs/hiv/model-seir.html
+ 
+        Parameters
+        ----------
+           p: parameters containing transition probabilities
+              population number
+
+        Returns
+        -------
+           value: Time series for S, E, I and R 
+        """
+        #{{{
+        g = Graph()
+    
+        for node in ['S','E','I','R']:
+            g.add_node(node, 0)
+    
+        g.set_node('S', p.population)
+        g.set_node('E', 0)
+        g.set_node('I', p.N_init)
+        g.set_node('R', 0)
+        
+        # cumulative time series
+        S = [g.get_node_value('S')] # Susceptible
+        E = [g.get_node_value('E')] # Exposed
+        I = [g.get_node_value('I')] # Infected
+        R = [g.get_node_value('R')] # Recovered
+        
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        
+        # En este modelo todos los infectados se confirman a los 10
+        # dias y se curan a los 20 dias de confirmados
+        T_IC = int(p.t_incubation/ p.dt)
+    
+        g.add_edge('S', 'S', nms, [0.2,  2])
+        g.add_edge('E', 'E', nms, [0.1,  14])
+        g.add_edge('I', 'I', nms, [0.7,  2])
+
+        g.add_edge('S', 'E', nms, [1.2,  1])
+        g.add_edge('E', 'I', nms, [0.1,  14]) #[, tiempo de incubacion]
+        g.add_edge('I', 'R', nms, [0.7, 2]) #[, tiempo de recuperacion] 
+    
+        t = 0.
+        time_steps = 0
+    
+        while t < p.t_max:
+    
+            time_steps = time_steps + 1
+    
+            t_prev = t
+            t = t + p.dt
+            ts.append(t)
+    
+            # (( S ))
+            prob_SS = g.get_edge('S', 'S', 'prob') # beta
+            lag_SS = g.get_edge('S', 'S', 'lag')
+            update_SS = S[-lag_SS] if lag_SS < len(S) else 0.
+
+            dS = - S[-1] * I[-1] * prob_SS / p.population
+            n_S = min(S[-1] + min(dS*p.dt, 0), p.population)
+
+            # (( E ))
+            prob_EE = g.get_edge('E', 'E', 'prob')
+            lag_EE = g.get_edge('E', 'E', 'lag')
+            update_EE = E[-lag_EE] if lag_EE < len(E) else 0.
+
+            dE = - dS - prob_EE * E[-1]
+
+            n_E = min(E[-1] + max(dE*p.dt, 0), p.population)
+            n_E = E[-1] + dE*p.dt
+
+            # (( I ))
+            prob_EI = g.get_edge('E', 'I', 'prob')
+            lag_EI = g.get_edge('E', 'I', 'lag')
+            update_EI = E[-lag_EI] if lag_EI < len(E) else 0.
+
+            prob_IR = g.get_edge('I', 'R', 'prob')
+            lag_IR = g.get_edge('I', 'R', 'lag')
+            update_IR = I[-lag_IR] if lag_IR < len(I) else 0.
+
+            prob_II = g.get_edge('I', 'I', 'prob')
+
+            dI = prob_EI * update_EI - prob_IR * update_IR
+            dI = -dI  # porque ????
+            n_I = min(I[-1] + dI*p.dt, p.population)
+
+
+            # (( R ))
+            prob_II = g.get_edge('I', 'I', 'prob')
+            dR = prob_II * I[-1]
+            n_R = min(R[-1] + max(dR*p.dt, 0), p.population)
+
+            S.append(n_S)
+            E.append(n_E)
+            I.append(n_I)
+            R.append(n_R)
+
+        return([ts, S, E, I, R]) 
+        #}}}
+
+    def model_SEIRF(self, p):
+        #{{{
+        g = Graph()
+    
+        for node in ['S','E','I','R','F']:
+            g.add_node(node, 0)
+    
+        g.set_node('I', p.N_init)
+        
+        # cumulative time series
+        S = [g.get_node_value('S')] # Susceptible
+        E = [g.get_node_value('E')] # Exposed
+        I = [g.get_node_value('I')] # Infected
+        R = [g.get_node_value('R')] # Recovered
+        F = [g.get_node_value('F')] # Fatalities
+        
+        ts = [0.] # time series
+        nms = ['prob','lag']
+        p_dt = 1.
+     
+        
+        # En este modelo todos los infectados se confirman a los 10
+        # dias y se curan a los 20 dias de confirmados
+        T_IC = int(p.t_incubation/ p.dt)
+    
+        g.add_edge('S', 'E', nms, [p.R,  0])
+        g.add_edge('E', 'I', nms, [0.5,  10])
+        g.add_edge('I', 'R', nms, [0.98, 30])
+        g.add_edge('I', 'F', nms, [0.02, 30])
+    
+        t = 0.
+        time_steps = 0
+    
+        while t < p.t_max:
+    
+            time_steps = time_steps + 1
+    
+            t_prev = t
+            t = t + p.dt
+            ts.append(t)
+    
+            # (( I ))
+            prob_II = g.get_edge('I', 'I', 'prob')
+            lag_II = g.get_edge('I', 'I', 'lag')
+            update_II = I[-lag_II] if lag_II < len(I) else 0.
+
+            prob_IC = g.get_edge('I', 'C', 'prob')
+            lag_IC = g.get_edge('I', 'C', 'lag')
+            update_IC = I[-lag_IC] if lag_IC < len(I) else 0.
+
+            n_I = min(I[-1] + I[-1] * prob_II * p.dt, p.population) - \
+                  update_IC * prob_IC * p.dt 
+            n_I = max(n_I, 0)
+
+            I.append(n_I)
+
+            # (( C ))
+            prob_CR = g.get_edge('C', 'R', 'prob')
+            lag_CR = g.get_edge('C', 'R', 'lag')
+            update_CR = C[-lag_CR] if lag_CR < len(C) else 0.
+
+            n_C = min(C[-1] + update_IC * prob_IC * p.dt, p.population) - \
+                  update_CR * prob_CR * p.dt
+            n_C = max(n_C, 0)
+            C.append(n_C)
+
+            # (( R ))
+            n_R = min(R[-1] + update_CR * prob_CR * p.dt, p.population) # recuperados nuevos
+            n_R = max(n_R, 0)
+            R.append(n_R)
+ 
+            # (( F ))
+
+            prob_CF = g.get_edge('C', 'F', 'prob')
+            lag_CF = g.get_edge('C', 'F', 'lag')
+            update_CF = C[-lag_CF] if lag_CF < len(C) else 0.
+
+            n_F = min(F[-1] + update_CF * prob_CF * p.dt, p.population) # recuperados nuevos
+
+            n_F = max(n_F, 0)
+            F.append(n_F)
+
+        return([ts, I, C, R]) 
+        #}}}
+
+    def model_SIER_BH(self, p):
         '''
         InfectionCurve(self, p): 
         computes the Infection Curve based on a probabilistic model
@@ -564,9 +851,9 @@ class InfectionCurve:
             - Dead
         
         ''' 
- 
-        #from graph_tools import Graph
-    
+        #{{{ 
+
+
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
@@ -722,9 +1009,6 @@ class InfectionCurve:
         #    n_C = I[-1] + update * prob * p.dt
         #    C.append(n_C)
 
-
-
-
         #    R = I
         #    C = I
     
@@ -733,9 +1017,32 @@ class InfectionCurve:
         #    # ver si se puede escribir por comprension
     
         #return([ts, I, C, R])
-    
+        #}}}
+                          
 
-    def model_SEIR():
+    def compute(self, p):
+        '''
+        InfectionCurve(self, p): 
+        computes the Infection Curve based on a probabilistic model
+        implemented in a simulation
+        
+        Args:
+            config object from ParseConfig
+      
+        Raises:
+      
+        Returns:
+            Time series for the curves of:
+            - Infected
+            - Confirmed
+            - Recovered
+            - Confirmed at home
+            - Confirmed at hospital
+            - Confirmed at ICU
+            - Dead
+        
+        ''' 
+        #{{{
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
@@ -827,83 +1134,11 @@ class InfectionCurve:
         g.add_edge('U', 'R', nms, [f_UR, T_UR])
         g.add_edge('U', 'D', nms, [f_UD, T_UD])
 
-        #g.show_weights()
-        #g.show_connections()
+        #from graph_tools import Graph
+    #}}}    
 
 
 
-    def model_SIR(self, p):
-        g = Graph()
-    
-        for node in ['I','C','R','H','B','U','D',]:
-            g.add_node(node, 0)
-    
-        g.set_node('I', p.N_init)
-        
-        # cumulative time series
-        I = [g.get_node_value('I')] # Infected
-        C = [g.get_node_value('C')] # Confirmed                    
-        R = [g.get_node_value('R')] # Recovered                    
-    
-        ts = [0.] # time series
-        nms = ['prob','lag']
-        p_dt = 1.
-     
-        
-        # En este modelo todos los infectados se confirman a los 10
-        # dias y se curan a los 20 dias de confirmados
-        T_IC = int(p.t_incubation/ p.dt)
-        T_CR = 20
-        f_IC = 1.
-        f_CR = 1.
-    
-        g.add_edge('I', 'I', nms, [p.R,  0])
-        g.add_edge('I', 'C', nms, [f_IC, T_IC])
-        g.add_edge('C', 'R', nms, [f_CR, T_CR])
-    
-        t = 0.
-        time_steps = 0
-    
-        while t < p.t_max:
-    
-            time_steps = time_steps + 1
-    
-            t_prev = t
-            t = t + p.dt
-            ts.append(t)
-    
-            # (( I ))
-            prob_II = g.get_edge('I', 'I', 'prob')
-            lag_II = g.get_edge('I', 'I', 'lag')
-            update_II = I[-lag_II] if lag_II < len(I) else 0.
-
-            prob_IC = g.get_edge('I', 'C', 'prob')
-            lag_IC = g.get_edge('I', 'C', 'lag')
-            update_IC = I[-lag_IC] if lag_IC < len(I) else 0.
-
-            n_I = min(I[-1] + I[-1] * prob_II * p.dt, p.population) - \
-                  update_IC * prob_IC * p.dt 
-            n_I = max(n_I, 0)
-
-            I.append(n_I)
-
-            # (( C ))
-            prob_CR = g.get_edge('C', 'R', 'prob')
-            lag_CR = g.get_edge('C', 'R', 'lag')
-            update_CR = C[-lag_CR] if lag_CR < len(C) else 0.
-
-            n_C = min(C[-1] + update_IC * prob_IC * p.dt, p.population) - \
-                  update_CR * prob_CR * p.dt
-            n_C = max(n_C, 0)
-            C.append(n_C)
-
-            # (( R ))
-            n_R = min(R[-1] + update_CR * prob_CR * p.dt, p.population) # recuperados nuevos
-            n_R = max(n_R, 0)
-            R.append(n_R)
- 
-        return([ts, I, C, R])
-             
 
     def plt_IC(t, ic, fplot):
         """
@@ -920,7 +1155,7 @@ class InfectionCurve:
             Nothing, just save the plot.
      
         """
- 
+        #{{{
     
         fig, ax = plt.subplots(figsize=(10, 10))
     
@@ -938,6 +1173,7 @@ class InfectionCurve:
     
         fig.savefig(fplot)
         plt.close()
+        #}}}
                             
     def plt_IC_n(self, t, ics, *args, **kwargs):
         """
@@ -952,8 +1188,9 @@ class InfectionCurve:
       
         Returns:
             Nothing, just save the plot.
-      
         """
+        #{{{
+
         fplot = kwargs.get('fplot', '../plt/plot.png')
         labels = kwargs.get('labels', ['data']*len(ics))
 
@@ -989,3 +1226,5 @@ class InfectionCurve:
         plt.tight_layout()
         fig.savefig(fplot)
         plt.close()
+        print('plot saved in ', fplot)
+        #}}}
