@@ -784,13 +784,12 @@ class InfectionCurve:
         
         T_IC = int(p.t_incubation/ p.dt)
     
-        g.add_edge('S', 'E', nms, [p.R,  0])
-        g.add_edge('E', 'E', nms, [p.R,  0])
-        g.add_edge('E', 'I', nms, [0.5,  10])
-        g.add_edge('I', 'I', nms, [0.5,  10])
+        g.add_edge('S', 'E', nms, [0.2,  0])
+        g.add_edge('E', 'E', nms, [0.1,  0])
+        g.add_edge('E', 'I', nms, [0.7,  14])
+        g.add_edge('I', 'I', nms, [1.2,  14])
         g.add_edge('I', 'R', nms, [0.98, 30])
-        g.add_edge('I', 'S', nms, [0.98, 30])
-        g.add_edge('R', 'F', nms, [0.02, 30])
+        g.add_edge('I', 'F', nms, [0.02, 30])
     
         t = 0.
         time_steps = 0
@@ -804,8 +803,8 @@ class InfectionCurve:
             ts.append(t)
              
             # (( S ))
-            prob_IS = g.get_edge('I', 'S', 'prob') # beta
-            dS = - S[-1] * ( I[-1]/p.population ) * prob_IS 
+            prob_SE = g.get_edge('S', 'E', 'prob') # beta
+            dS = - S[-1] * ( I[-1]/p.population ) * prob_SE 
             n_S = S[-1] + dS*p.dt
 
             # (( E ))
@@ -835,16 +834,17 @@ class InfectionCurve:
             n_I = min(I[-1] + dI*p.dt, p.population)
 
             # (( R ))
-            dR = prob_IR * update_IR
+            prob_IF = g.get_edge('I', 'F', 'prob')
+            lag_IF = g.get_edge('I', 'F', 'lag')
+            update_IF = I[-lag_IF] if lag_IF < len(R) else 0.
+
+            dR = prob_IR * update_IR - prob_IF * update_IF
             n_R = min(R[-1] + max(dR*p.dt, 0), p.population)
 
             # (( F ))
-            prob_RF = g.get_edge('R', 'F', 'prob')
-            lag_RF = g.get_edge('R', 'F', 'lag')
-            update_RF = I[-lag_RF] if lag_RF < len(R) else 0.
             
-            dF = prob_RF * R[-1]
-            n_F = min(R[-1] + max(dR*p.dt, 0), p.population)
+            dF = prob_IF * update_IF
+            n_F = min(I[-1] + max(dR*p.dt, 0), p.population)
 
             S.append(n_S)
             E.append(n_E)
