@@ -7,6 +7,7 @@ from configparser import ConfigParser
 
 
 class parser(ConfigParser):
+    #{{{
     """
     parser class
     manipulation of parser from ini files
@@ -98,8 +99,10 @@ class parser(ConfigParser):
         fname_recovered = self['experiment']['fname_recovered']
         fname_inf_dead =  self['experiment']['fname_inf_dead'] 
         fname_inf_home =  self['experiment']['fname_inf_home'] 
-        fname_inf_bed =   self['experiment']['fname_inf_bed']
-        fname_inf_uti =   self['experiment']['fname_inf_uti']
+        fname_inf_bed  =  self['experiment']['fname_inf_bed']
+        fname_inf_uti  =  self['experiment']['fname_inf_uti']
+        fname_sir      =  self['experiment']['fname_sir']
+        fname_seir     =  self['experiment']['fname_seir']
          
         fname_infected =  dir_plot + fname_infected + '_' + exp_ID + ext
         fname_confirmed = dir_plot + fname_confirmed + '_' + exp_ID + ext
@@ -108,6 +111,8 @@ class parser(ConfigParser):
         fname_inf_home =  dir_plot + fname_inf_home + '_' + exp_ID + ext  
         fname_inf_bed =   dir_plot + fname_inf_bed + '_' + exp_ID + ext 
         fname_inf_uti =   dir_plot + fname_inf_uti + '_' + exp_ID + ext 
+        fname_sir = dir_plot + fname_sir + '_' + exp_ID + ext 
+        fname_seir = dir_plot + fname_seir + '_' + exp_ID + ext 
     
         names = 'fname_infected \
                  fname_confirmed \
@@ -115,12 +120,15 @@ class parser(ConfigParser):
                  fname_inf_dead \
                  fname_inf_home \
                  fname_inf_bed \
-                 fname_inf_uti'
+                 fname_inf_uti \
+                 fname_sir \
+                 fname_seir'
         
         parset = namedtuple('pars', names)
     
         res = parset(fname_infected, fname_confirmed, fname_recovered,
-                     fname_inf_dead, fname_inf_home, fname_inf_bed, fname_inf_uti) 
+                     fname_inf_dead, fname_inf_home, fname_inf_bed, fname_inf_uti,
+                     fname_sir, fname_seir) 
     
         self.filenames = res
     
@@ -196,9 +204,11 @@ class parser(ConfigParser):
               t_incubation, t_infectious)
     
         self.p = res
+    #}}}
 
 
 class table_draw:
+    #{{{
 
     def __init__(self):
         self.size = []
@@ -274,9 +284,11 @@ class table_draw:
 
         df = self.D[['x_inf', 'x_sup','y']]
         df.to_csv(filename)
+    #}}}
 
 
 class node:
+    #{{{
     """
     class node
     This class is used to create and manipulated nodes.
@@ -316,9 +328,11 @@ class node:
 
     def get_weight(self, neighbor):
         return self.outgoing[neighbor]
+    #}}}
 
 
 class Graph:
+    #{{{
     """
     class Graph
     This class is used to create and manipulated graphs
@@ -535,6 +549,7 @@ class Graph:
             a = self.get_node(v)
             x.append( self.get_edge(a.id, nnode, key) )
         return(x)
+    #}}}
 
 
 class InfectionCurve:
@@ -543,6 +558,7 @@ class InfectionCurve:
     # http://epirecip.es/epicookbook/chapters/sir-stochastic-discretestate-discretetime/python
         
     def model_SIR(self, p):
+        #{{{
         """
         method: model_SIR(parameters)
 
@@ -561,7 +577,6 @@ class InfectionCurve:
         -------
            value: Time series for S, I and R
         """
-        #{{{
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
@@ -635,6 +650,7 @@ class InfectionCurve:
         #}}}
 
     def model_SEIR(self, p):
+        #{{{
         """
         method: model_SEIR(parameters)
 
@@ -652,7 +668,6 @@ class InfectionCurve:
         -------
            value: Time series for S, E, I and R 
         """
-        #{{{
         g = Graph()
     
         for node in ['S','E','I','R']:
@@ -673,14 +688,11 @@ class InfectionCurve:
         nms = ['prob','lag']
         p_dt = 1.
      
-        
-        # En este modelo todos los infectados se confirman a los 10
-        # dias y se curan a los 20 dias de confirmados
         T_IC = int(p.t_incubation/ p.dt)
     
-        g.add_edge('S', 'S', nms, [0.2,  2])
-        g.add_edge('E', 'E', nms, [0.1,  14])
-        g.add_edge('I', 'I', nms, [0.7,  2])
+        g.add_edge('S', 'S', nms, [0.1,  2])
+        g.add_edge('E', 'E', nms, [0.4,  21])
+        g.add_edge('I', 'I', nms, [0.1,  2])
 
         g.add_edge('S', 'E', nms, [1.2,  1])
         g.add_edge('E', 'I', nms, [0.1,  14]) #[, tiempo de incubacion]
@@ -702,8 +714,9 @@ class InfectionCurve:
             lag_SS = g.get_edge('S', 'S', 'lag')
             update_SS = S[-lag_SS] if lag_SS < len(S) else 0.
 
-            dS = - S[-1] * I[-1] * prob_SS / p.population
-            n_S = min(S[-1] + min(dS*p.dt, 0), p.population)
+            dS = - S[-1] * ( I[-1]/p.population ) * prob_SS 
+            #n_S = min(S[-1] + min(dS*p.dt, 0), p.population)
+            n_S = S[-1] + dS*p.dt
 
             # (( E ))
             prob_EE = g.get_edge('E', 'E', 'prob')
@@ -712,7 +725,7 @@ class InfectionCurve:
 
             dE = - dS - prob_EE * E[-1]
 
-            n_E = min(E[-1] + max(dE*p.dt, 0), p.population)
+            #n_E = min(E[-1] + max(dE*p.dt, 0), p.population)
             n_E = E[-1] + dE*p.dt
 
             # (( I ))
@@ -751,7 +764,11 @@ class InfectionCurve:
         for node in ['S','E','I','R','F']:
             g.add_node(node, 0)
     
+        g.set_node('S', p.population)
+        g.set_node('E', 0)
         g.set_node('I', p.N_init)
+        g.set_node('R', 0)
+        g.set_node('F', 0)
         
         # cumulative time series
         S = [g.get_node_value('S')] # Susceptible
@@ -765,14 +782,15 @@ class InfectionCurve:
         p_dt = 1.
      
         
-        # En este modelo todos los infectados se confirman a los 10
-        # dias y se curan a los 20 dias de confirmados
         T_IC = int(p.t_incubation/ p.dt)
     
         g.add_edge('S', 'E', nms, [p.R,  0])
+        g.add_edge('E', 'E', nms, [p.R,  0])
         g.add_edge('E', 'I', nms, [0.5,  10])
+        g.add_edge('I', 'I', nms, [0.5,  10])
         g.add_edge('I', 'R', nms, [0.98, 30])
-        g.add_edge('I', 'F', nms, [0.02, 30])
+        g.add_edge('I', 'S', nms, [0.98, 30])
+        g.add_edge('R', 'F', nms, [0.02, 30])
     
         t = 0.
         time_steps = 0
@@ -784,52 +802,63 @@ class InfectionCurve:
             t_prev = t
             t = t + p.dt
             ts.append(t)
-    
+             
+            # (( S ))
+            prob_IS = g.get_edge('I', 'S', 'prob') # beta
+            dS = - S[-1] * ( I[-1]/p.population ) * prob_IS 
+            n_S = S[-1] + dS*p.dt
+
+            # (( E ))
+            prob_EE = g.get_edge('E', 'E', 'prob')
+            lag_EE = g.get_edge('E', 'E', 'lag')
+            update_EE = E[-lag_EE] if lag_EE < len(E) else 0.
+
+            dE = - dS - prob_EE * update_EE
+            n_E = E[-1] + dE*p.dt
+
             # (( I ))
+            prob_EI = g.get_edge('E', 'I', 'prob')
+            lag_EI = g.get_edge('E', 'I', 'lag')
+            update_EI = E[-lag_EI] if lag_EI < len(E) else 0.
+
             prob_II = g.get_edge('I', 'I', 'prob')
             lag_II = g.get_edge('I', 'I', 'lag')
             update_II = I[-lag_II] if lag_II < len(I) else 0.
 
-            prob_IC = g.get_edge('I', 'C', 'prob')
-            lag_IC = g.get_edge('I', 'C', 'lag')
-            update_IC = I[-lag_IC] if lag_IC < len(I) else 0.
+            prob_IR = g.get_edge('I', 'R', 'prob')
+            lag_IR = g.get_edge('I', 'R', 'lag')
+            update_IR = I[-lag_IR] if lag_IR < len(I) else 0.
 
-            n_I = min(I[-1] + I[-1] * prob_II * p.dt, p.population) - \
-                  update_IC * prob_IC * p.dt 
-            n_I = max(n_I, 0)
+            prob_II = g.get_edge('I', 'I', 'prob')
 
-            I.append(n_I)
-
-            # (( C ))
-            prob_CR = g.get_edge('C', 'R', 'prob')
-            lag_CR = g.get_edge('C', 'R', 'lag')
-            update_CR = C[-lag_CR] if lag_CR < len(C) else 0.
-
-            n_C = min(C[-1] + update_IC * prob_IC * p.dt, p.population) - \
-                  update_CR * prob_CR * p.dt
-            n_C = max(n_C, 0)
-            C.append(n_C)
+            dI = prob_EI * update_EI + prob_II * update_II - prob_IR * update_IR
+            n_I = min(I[-1] + dI*p.dt, p.population)
 
             # (( R ))
-            n_R = min(R[-1] + update_CR * prob_CR * p.dt, p.population) # recuperados nuevos
-            n_R = max(n_R, 0)
-            R.append(n_R)
- 
+            dR = prob_IR * update_IR
+            n_R = min(R[-1] + max(dR*p.dt, 0), p.population)
+
             # (( F ))
+            prob_RF = g.get_edge('R', 'F', 'prob')
+            lag_RF = g.get_edge('R', 'F', 'lag')
+            update_RF = I[-lag_RF] if lag_RF < len(R) else 0.
+            
+            dF = prob_RF * R[-1]
+            n_F = min(R[-1] + max(dR*p.dt, 0), p.population)
 
-            prob_CF = g.get_edge('C', 'F', 'prob')
-            lag_CF = g.get_edge('C', 'F', 'lag')
-            update_CF = C[-lag_CF] if lag_CF < len(C) else 0.
-
-            n_F = min(F[-1] + update_CF * prob_CF * p.dt, p.population) # recuperados nuevos
-
-            n_F = max(n_F, 0)
+            S.append(n_S)
+            E.append(n_E)
+            I.append(n_I)
+            R.append(n_R)
             F.append(n_F)
+ 
 
-        return([ts, I, C, R]) 
+
+        return([ts, S, E, I, R, F]) 
         #}}}
 
     def model_SIER_BH(self, p):
+        #{{{ 
         '''
         InfectionCurve(self, p): 
         computes the Infection Curve based on a probabilistic model
@@ -851,8 +880,6 @@ class InfectionCurve:
             - Dead
         
         ''' 
-        #{{{ 
-
 
         g = Graph()
     
@@ -1018,11 +1045,22 @@ class InfectionCurve:
     
         #return([ts, I, C, R])
         #}}}
-                          
+
+    def model_distributions(self, p):
+       #{{{
+       """
+
+       a = np.array([ [1, 2, 3], [11, 12, 13] ])
+       k = a.shape[1]
+       np.insert(a, [k], [[117],[127]], axis=1)
+       """
+       return(True)
+       #}}}
 
     def compute(self, p):
+        #{{{
         '''
-        InfectionCurve(self, p): 
+        compute(self, p): 
         computes the Infection Curve based on a probabilistic model
         implemented in a simulation
         
@@ -1042,7 +1080,6 @@ class InfectionCurve:
             - Dead
         
         ''' 
-        #{{{
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
@@ -1137,10 +1174,8 @@ class InfectionCurve:
         #from graph_tools import Graph
     #}}}    
 
-
-
-
     def plt_IC(t, ic, fplot):
+        #{{{
         """
         plt_IC()
         plots the infection curve
@@ -1155,7 +1190,6 @@ class InfectionCurve:
             Nothing, just save the plot.
      
         """
-        #{{{
     
         fig, ax = plt.subplots(figsize=(10, 10))
     
@@ -1176,6 +1210,7 @@ class InfectionCurve:
         #}}}
                             
     def plt_IC_n(self, t, ics, *args, **kwargs):
+        #{{{
         """
         plt_IC_n()
         plots the infection curve
@@ -1189,7 +1224,6 @@ class InfectionCurve:
         Returns:
             Nothing, just save the plot.
         """
-        #{{{
 
         fplot = kwargs.get('fplot', '../plt/plot.png')
         labels = kwargs.get('labels', ['data']*len(ics))

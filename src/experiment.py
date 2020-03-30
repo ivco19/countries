@@ -18,21 +18,18 @@ conf.load_parameters()
 
 c = cv19.InfectionCurve()
 
-# Modelo simple SIR, anda:
-# t, I, C, R = c.model_SIR(conf.p)
-# lbls = ['I','C','R']
-# c.plt_IC_n(t, [I, C, R], labels=lbls, fplot=conf.filenames.fname_infected)
+## Modelo simple SIR:
+#t, I, C, R = c.model_SIR(conf.p)
+#lbls = ['I','C','R']
+#c.plt_IC_n(t, [I, C, R], labels=lbls, fplot=conf.filenames.fname_sir)
+#
+## Modelo simple SEIR:
+#t, S, E, I, R = c.model_SEIR(conf.p)
+#lbls = ['S','E','I','R']
+#c.plt_IC_n(t, [S, E, I, R], labels=lbls, fplot=conf.filenames.fname_seir)
 
-
-
-# Modelo simple SEIR:
-t, S, E, I, R = c.model_SEIR(conf.p)
-lbls = ['S','E','I','R']
-c.plt_IC_n(t, [S, E, I, R], labels=lbls, fplot=conf.filenames.fname_infected)
-
-
-
-
-
-
-# https://towardsdatascience.com/covid-19-infection-in-italy-mathematical-models-and-predictions-7784b4d7dd8d
+# Modelo simple SEIRF:
+t, S, E, I, R, F = c.model_SEIRF(conf.p)
+lbls = ['S','E','I','R','F']
+c.plt_IC_n(t, [S, E, I, R, F], labels=lbls, fplot=conf.filenames.fname_seir)
+ 
