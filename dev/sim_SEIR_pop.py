@@ -93,16 +93,14 @@ g = cv19.Graph_nd()
 # 1. inventar una PDF cualquiera para la distrib de poblacion:
 # en este ejemplo hay Nages=3 rangos: joven, adulto, mayor
 Nages = 3
-pdf = np.array([8, 1, 1])
+pdf = np.array([5, 3, 2])
 pdf = pdf / float(pdf.sum())
 r, rep = random_gen(pdf.cumsum(), population)
 pop_by_age = np.c_[rep]
 
 
-
 # 1. inventar una PDF cualquiera para la distrib de infectados inicial
-
-S_init_by_age = np.c_[[[0],[10],[0]]]
+S_init_by_age = np.c_[[[3],[20],[1]]]
  
 
 I0 = S_init_by_age
@@ -115,10 +113,16 @@ E = E0
 I = I0
 R = R0
 
-beta = 0.2
-beta = np.c_[[[beta],[beta],[beta]]]
-print('beta :::::::::')
-print(beta)
+R_0 = 2.2
+
+beta = 0.7
+betas = np.c_[[[beta],[beta],[beta]]]
+
+sigma = 0.05
+sigmas = np.c_[[[sigma],[sigma],[sigma]]]
+
+gamma = beta/R_0
+gammas = np.c_[[[gamma],[gamma],[gamma]]]
 
 
 ts = [0.] # time series
@@ -126,7 +130,7 @@ nms = ['prob','lag']
 p_dt = 1.
 t = 0.
 time_steps = 0
-t_max = 3
+t_max = 140
 
 print('S :::::::::')
 print(S)
@@ -143,62 +147,37 @@ while t < t_max:
 
     # (( S ))
 
-    np.c_[S[:,-1]] * np.c_[I[:,-1]]
+    # al actualziar S usar el I por edades y el S total.
+    Sf = S[:,-1].reshape(3,1)
+    St = np.c_[([S[:,-1].sum()]*3)]
+    If = I[:,-1].reshape(3,1)
+    dS = - St * If / population * betas
 
-    #dS = - S[-1] * ( I[-1]/population ) * prob_SI
-    #n_S = np.c_[[[time_steps],[time_steps],[time_steps]]]
+    n_S = Sf + dS
 
-    #S = np.insert(S, [time_steps], n_S, axis=1)
+    # (( E ))
 
+    It = np.c_[([I[:,-1].sum()]*3)]
+    Ef = E[:,-1].reshape(3,1) 
+    dE = St * It / population * betas - sigmas * Ef
+    n_E = Ef + dE
 
-#    #update_SI = S[-lag_SI] if lag_SI < len(S) else S[-1]
-#    #dS = - S[-1] * ( I[-1]/population ) * prob_SI
-#
-#    dS = - beta*S[-1]*I[-1]/population
-#
-#    n_S = S[-1] + dS*p.dt
-# 
-#    # (( E ))
-#    #prob_SI = g.get_edge('S', 'I', 'prob') # beta
-#    #lag_SI = g.get_edge('S', 'I', 'lag')
-#    #update_SI = S[-lag_SI] if lag_SI < len(S) else S[-1]
-#    #dS = - S[-1] * ( I[-1]/population ) * prob_SI
-#
-#    dE = beta*S[-1]*I[-1]/population - sigma*E[-1]
-#
-#    n_E = E[-1] + dE*p.dt
-#
-#    # (( I ))
-#    #prob_IR = g.get_edge('I', 'R', 'prob') # mu
-#    #lag_IR = g.get_edge('I', 'R', 'lag')
-#    #update_IR = I[-lag_IR] if lag_IR < len(I) else I[-1]
-#    #dI = -dS  - prob_IR * update_IR
-#
-#    dI =  sigma*E[-1] - gamma*I[-1]
-#
-#    n_I = I[-1] + dI*p.dt
-#
-#    # (( R ))
-#    dR = gamma*I[-1]
-#
-#    n_R = R[-1] + dR*p.dt
+    # (( I ))
 
+    dI =  sigmas*Ef  - gammas * If
+    n_I = If + dI
 
-    # Update S
-    # INSERT COLUMN: reemplaza a: S.append(n_S)
-    #k = S.shape[1]
-    #k = 1
-    #n_S = np.c_[[[time_steps],[time_steps],[time_steps]]]
-    #S = np.insert(S, [k], n_S, axis=1)
+    # (( R ))
 
+    Rf = R[:,-1].reshape(3,1) 
+    dR =  sigmas*Ef  - gammas * If
+    n_R = Rf + dR
 
-#np.ndarray(shape=(9,1), dtype=float)
+    S = np.insert(S, [time_steps], n_S, axis=1)
+    E = np.insert(E, [time_steps], n_E, axis=1)
+    I = np.insert(I, [time_steps], n_I, axis=1)
+    R = np.insert(R, [time_steps], n_R, axis=1)
 
-
-#    E.append(n_E)
-#    I.append(n_I)
-#    R.append(n_R)
-#
 ##}}}
 #
 #
@@ -207,45 +186,50 @@ while t < t_max:
 ##------------------------------------------------------- PLOT
 ##{{{
 #
-#ics = [S, E, I, R]
-#labels = ['S', 'E', 'I', 'R']
-#t = ts
-#
-#plt.rcParams['savefig.facecolor'] = "0.8"
-#fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-#
-##--- SIMU linear
-#for ic, lbl in zip(ics, labels):
-#    sns.lineplot(x=t, y=ic, sort=False, linewidth=4, ax=ax[0], label=lbl)
-#    sns.scatterplot(t, ic, ax=ax[0])
-#
-#ax[0].set_xlabel('Time [days]', fontsize=22)
-#ax[0].set_ylabel('Number infected', fontsize=22)
-#ax[0].legend()
-#ax[0].grid()
-#ax[0].set_title('Simulation')
-##---
-#ax[1].set(yscale="log")
-#ax[1].yaxis.set_major_formatter(\
-#        ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
-#ax[1].set_title('Simulation')
-#
-##--- SIMU log
-#for ic in ics:
-#    sns.lineplot(x=t, y=ic, sort=False, linewidth=2, ax=ax[1])
-#    sns.scatterplot(t, ic, ax=ax[1])
-#ax[1].set_xlabel('Time [days]', fontsize=22)
-#ax[1].set_ylabel('Number infected', fontsize=22)
-#ax[1].grid()
-#
-#
-#
-##--- plt
-#
-#plt.xticks(rotation=0, fontsize=22)
-#plt.yticks(rotation=90, fontsize=22)
-#plt.tight_layout()
-#fig.savefig('../plt/plot_sim.png')
-#plt.close()
-#
+ics = [S[0], S[1], S[2], E[0], E[1], E[2], I[0], I[1], I[2], R[0], R[1], R[2]]
+labels = ['S', 'E', 'I', 'R']
+labels = ['S[0]', 'S[1]', 'S[2]', 'E[0]', 'E[1]', 'E[2]', 'I[0]',
+        'I[1]', 'I[2]', 'R[0]', 'R[1]', 'R[2]'] 
+clrs = ['red']*3 + ['blue']*3 + ['green']*3 + ['orange']*3 
+t = ts
+
+plt.rcParams['savefig.facecolor'] = "0.8"
+fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+
+#--- SIMU linear
+for i, ic in enumerate(ics):
+    sns.lineplot(x=t, y=ic, sort=False, linewidth=1, ax=ax[0],
+            label=labels[i], color=clrs[i])
+    #sns.scatterplot(t, ic, ax=ax[0])
+
+ax[0].set_xlabel('Time [days]', fontsize=22)
+ax[0].set_ylabel('Number infected', fontsize=22)
+ax[0].legend()
+ax[0].grid()
+ax[0].set_title('Simulation')
+#---
+ax[1].set(yscale="log")
+ax[1].yaxis.set_major_formatter(\
+        ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
+ax[1].set_title('Simulation')
+
+#--- SIMU log
+for i, ic in enumerate(ics):
+    sns.lineplot(x=t, y=ic, sort=False, linewidth=1, ax=ax[1],
+            color=clrs[i])
+    #sns.scatterplot(t, ic, ax=ax[1])
+ax[1].set_xlabel('Time [days]', fontsize=22)
+ax[1].set_ylabel('Number infected', fontsize=22)
+ax[1].grid()
+
+
+
+#--- plt
+
+plt.xticks(rotation=0, fontsize=22)
+plt.yticks(rotation=90, fontsize=22)
+plt.tight_layout()
+fig.savefig('../plt/plot_sim_dists.png')
+plt.close()
+
 #}}}

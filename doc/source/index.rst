@@ -26,6 +26,7 @@ Science case
    :maxdepth: 2
 
    sci/proposal
+   sci/models
    sci/references
 
 ***************
