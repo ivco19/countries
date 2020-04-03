@@ -11,6 +11,7 @@ Tools to analize covid19 data:
 :target: https://ivcov19-countries.readthedocs.io/en/latest/?badge=latest
 :alt: Documentation Status
 
+This repository is part of the `ARCOVID project <https://arcovid19.readthedocs.io/en/latest/>`_.
 
  
 Authors
