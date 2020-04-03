@@ -16,12 +16,28 @@ from EpiModel import *
 import cv19
 
 #-------------------------------------------------------------
-# Implementacion del modelo SEIR
+# Esta es una implementacion del modelo SEIR de desarrollo,
+# para que luego reemplace a las funciones del modulo cv19
 #
+# en la version original:
 # no hay retardo, el contagio y los sintomas son instantaneos
 # no es estocástico
 # toda la poblacion reacciona igual al virus
 # es cerrado: S+I+R=N
+#
+# en esta version:
+# hay retardo estadistico
+# no es estocástico
+# es cerrado: S+I+R=N
+#
+# Mejoras a realizar:
+# - incorporar casos importados: simplemente sumar una Poisson a I
+# - incorporar la naturaleza estocástica: simplemente sortear una
+#   VA en lugar de hacer el calculo determinista
+# - incorporar cuarentenas: hacer que beta sea una función del tiempo
+#
+# Con eso el modelo tendría todo
+#
 #--------------------------------------------------------------
 
 
@@ -51,10 +67,6 @@ def random_gen(A, n=1):
         rep[j] = rep[j] + 1
     return(res, rep) 
  
-
-
-
-
 
 
 #___________________________________
@@ -87,8 +99,6 @@ c = cv19.InfectionCurve()
 p = conf.p
 g = cv19.Graph_nd()
 
-
-
 # al ppo. todos en S con la distrib de la poblacion:
 # 1. inventar una PDF cualquiera para la distrib de poblacion:
 # en este ejemplo hay Nages=3 rangos: joven, adulto, mayor
@@ -99,20 +109,22 @@ r, rep = random_gen(pdf.cumsum(), population)
 pop_by_age = np.c_[rep]
 
 
-# 1. inventar una PDF cualquiera para la distrib de infectados inicial
+# Population has a given age distribution
+#---------------------------------------------------
 S_init_by_age = np.c_[[[3],[20],[1]]]
- 
 
+# Initialize graph:
+#---------------------------------------------------
 I0 = S_init_by_age
 S0 = pop_by_age - I0
 E0 = np.zeros([Nages,1])
 R0 = np.zeros([Nages,1])
 
-S = S0
-E = E0
-I = I0
-R = R0
+S, E, I, R = S0, E0, I0, R0
 
+
+# transition probabilities may depend on the age:
+#----------------------------------------------------
 R_0 = 2.2
 
 beta = 0.7
@@ -123,6 +135,7 @@ sigmas = np.c_[[[sigma],[sigma],[sigma]]]
 
 gamma = beta/R_0
 gammas = np.c_[[[gamma],[gamma],[gamma]]]
+#----------------------------------------------------
 
 
 ts = [0.] # time series
@@ -156,6 +169,10 @@ while t < t_max:
     n_S = Sf + dS
 
     # (( E ))
+
+    # para el lag:
+    # reemplazar I[:,-1] por I[:,-l:] y pesar por la distribución
+    # de tiempos de retardo.
 
     It = np.c_[([I[:,-1].sum()]*3)]
     Ef = E[:,-1].reshape(3,1) 
