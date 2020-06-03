@@ -360,18 +360,18 @@ class Graph:
 
     for i, inode in enumerate(['A','B','C','D']):
         print(i)
-        g.add_node(inode, 0)
+        g.add_compartment(inode, 0)
 
     nms = ['x', 'y']
-    g.add_edge('A', 'B', nms, [1, 100])
-    g.add_edge('A', 'C', nms, [2, 200])
-    g.add_edge('B', 'D', nms, [3, 300])
-    g.add_edge('D', 'B', nms, [4, 400])
-    g.add_edge('D', 'C', nms, [5, 500])
-    g.add_edge('C', 'C', nms, [6, 600])
+    g.add_transition('A', 'B', nms, [1, 100])
+    g.add_transition('A', 'C', nms, [2, 200])
+    g.add_transition('B', 'D', nms, [3, 300])
+    g.add_transition('D', 'B', nms, [4, 400])
+    g.add_transition('D', 'C', nms, [5, 500])
+    g.add_transition('C', 'C', nms, [6, 600])
 
     # A node can be connected to itself.
-    g.add_edge('B', 'B', nms, [333, 333])
+    g.add_transition('B', 'B', nms, [333, 333])
 
     g.show()
 
@@ -385,7 +385,7 @@ class Graph:
 
     Methods
     -------
-    add_node(node, value)
+    add_compartment(node, value)
     get_node()
     get_node_value()
     set_node()
@@ -406,9 +406,9 @@ class Graph:
         return iter(self.vert_dict.values())
 
     # node functions --------------------------------------
-    def add_node(self, nnode, value):
+    def add_compartment(self, nnode, value):
         """
-        method: add_node
+        method: add_compartment
      
         Adds a node to a graph. The node must have a value.
 
@@ -496,7 +496,7 @@ class Graph:
 
 
     # edge functions --------------------------------------
-    def add_edge(self, frm, to, names = [], values = 0):
+    def add_transition(self, frm, to, names = [], values = 0):
         """
         warning: does not verify if edge already exists
         """
@@ -513,9 +513,9 @@ class Graph:
 
     def get_edge(self, frm, to, field):
         if frm not in self.vert_dict:
-            self.add_node(frm)
+            self.add_compartment(frm)
         if to not in self.vert_dict:
-            self.add_node(to)
+            self.add_compartment(to)
 
         v_frm = self.get_node(frm)
         v_to  = self.get_node(to)
@@ -625,18 +625,18 @@ class Graph_nd:
 
     for i, inode in enumerate(['A','B','C','D']):
         print(i)
-        g.add_node(inode, 0)
+        g.add_compartment(inode, 0)
 
     nms = ['x', 'y']
-    g.add_edge('A', 'B', nms, [1, 100])
-    g.add_edge('A', 'C', nms, [2, 200])
-    g.add_edge('B', 'D', nms, [3, 300])
-    g.add_edge('D', 'B', nms, [4, 400])
-    g.add_edge('D', 'C', nms, [5, 500])
-    g.add_edge('C', 'C', nms, [6, 600])
+    g.add_transition('A', 'B', nms, [1, 100])
+    g.add_transition('A', 'C', nms, [2, 200])
+    g.add_transition('B', 'D', nms, [3, 300])
+    g.add_transition('D', 'B', nms, [4, 400])
+    g.add_transition('D', 'C', nms, [5, 500])
+    g.add_transition('C', 'C', nms, [6, 600])
 
     # A node can be connected to itself.
-    g.add_edge('B', 'B', nms, [333, 333])
+    g.add_transition('B', 'B', nms, [333, 333])
 
     g.show()
 
@@ -650,7 +650,7 @@ class Graph_nd:
 
     Methods
     -------
-    add_node(node, value)
+    add_compartment(node, value)
     get_node()
     get_node_value()
     set_node()
@@ -671,9 +671,9 @@ class Graph_nd:
         return iter(self.vert_dict.values())
 
     # node functions --------------------------------------
-    def add_node(self, nnode, value):
+    def add_compartment(self, nnode, value):
         """
-        method: add_node
+        method: add_compartment
      
         Adds a node to a graph. The node must have a value.
 
@@ -761,7 +761,7 @@ class Graph_nd:
 
 
     # edge functions --------------------------------------
-    def add_edge(self, frm, to, names = [], values = 0):
+    def add_transition(self, frm, to, names = [], values = 0):
         """
         warning: does not verify if edge already exists
         """
@@ -778,9 +778,9 @@ class Graph_nd:
 
     def get_edge(self, frm, to, field):
         if frm not in self.vert_dict:
-            self.add_node(frm)
+            self.add_compartment(frm)
         if to not in self.vert_dict:
-            self.add_node(to)
+            self.add_compartment(to)
 
         v_frm = self.get_node(frm)
         v_to  = self.get_node(to)
@@ -831,7 +831,7 @@ class Graph_nd:
     #}}}
 
 
-class InfectionCurve:
+class IDModel:
  
     def model_SIR(self, p):
         #{{{
@@ -856,7 +856,7 @@ class InfectionCurve:
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
-            g.add_node(node, 0)
+            g.add_compartment(node, 0)
     
         g.set_node('I', p.N_init)
         
@@ -877,9 +877,9 @@ class InfectionCurve:
         f_IC = 1.
         f_CR = 1.
     
-        g.add_edge('I', 'I', nms, [p.R,  0])
-        g.add_edge('I', 'C', nms, [f_IC, T_IC])
-        g.add_edge('C', 'R', nms, [f_CR, T_CR])
+        g.add_transition('I', 'I', nms, [p.R,  0])
+        g.add_transition('I', 'C', nms, [f_IC, T_IC])
+        g.add_transition('C', 'R', nms, [f_CR, T_CR])
     
         t = 0.
         time_steps = 0
@@ -947,7 +947,7 @@ class InfectionCurve:
         g = Graph()
     
         for node in ['S','E','I','R']:
-            g.add_node(node, 0)
+            g.add_compartment(node, 0)
     
         g.set_node('S', p.population)
         g.set_node('E', 0)
@@ -966,13 +966,13 @@ class InfectionCurve:
      
         T_IC = int(p.t_incubation/ p.dt)
     
-        g.add_edge('S', 'S', nms, [0.1,  2])
-        g.add_edge('E', 'E', nms, [0.4,  21])
-        g.add_edge('I', 'I', nms, [0.1,  2])
+        g.add_transition('S', 'S', nms, [0.1,  2])
+        g.add_transition('E', 'E', nms, [0.4,  21])
+        g.add_transition('I', 'I', nms, [0.1,  2])
 
-        g.add_edge('S', 'E', nms, [1.2,  1])
-        g.add_edge('E', 'I', nms, [0.1,  14]) #[, tiempo de incubacion]
-        g.add_edge('I', 'R', nms, [0.7, 2]) #[, tiempo de recuperacion] 
+        g.add_transition('S', 'E', nms, [1.2,  1])
+        g.add_transition('E', 'I', nms, [0.1,  14]) #[, tiempo de incubacion]
+        g.add_transition('I', 'R', nms, [0.7, 2]) #[, tiempo de recuperacion] 
     
         t = 0.
         time_steps = 0
@@ -1038,7 +1038,7 @@ class InfectionCurve:
         g = Graph()
     
         for node in ['S','E','I','R','F']:
-            g.add_node(node, 0)
+            g.add_compartment(node, 0)
     
         g.set_node('S', p.population)
         g.set_node('E', 0)
@@ -1060,12 +1060,12 @@ class InfectionCurve:
         
         T_IC = int(p.t_incubation/ p.dt)
     
-        g.add_edge('S', 'E', nms, [0.2,  0])
-        g.add_edge('E', 'E', nms, [0.1,  0])
-        g.add_edge('E', 'I', nms, [0.7,  14])
-        g.add_edge('I', 'I', nms, [1.2,  14])
-        g.add_edge('I', 'R', nms, [0.98, 30])
-        g.add_edge('I', 'F', nms, [0.02, 30])
+        g.add_transition('S', 'E', nms, [0.2,  0])
+        g.add_transition('E', 'E', nms, [0.1,  0])
+        g.add_transition('E', 'I', nms, [0.7,  14])
+        g.add_transition('I', 'I', nms, [1.2,  14])
+        g.add_transition('I', 'R', nms, [0.98, 30])
+        g.add_transition('I', 'F', nms, [0.02, 30])
     
         t = 0.
         time_steps = 0
@@ -1136,7 +1136,7 @@ class InfectionCurve:
     def model_SIER_BH(self, p):
         #{{{ 
         '''
-        InfectionCurve(self, p): 
+        IDModel(self, p): 
         computes the Infection Curve based on a probabilistic model
         implemented in a simulation
         
@@ -1160,7 +1160,7 @@ class InfectionCurve:
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
-            g.add_node(node, 0)
+            g.add_compartment(node, 0)
     
         g.set_node('I', p.N_init)
         
@@ -1227,29 +1227,29 @@ class InfectionCurve:
         #f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
         #                                                                
     
-        #g.add_edge('I', 'I', nms, [p.R,  0])
+        #g.add_transition('I', 'I', nms, [p.R,  0])
         #
-        #g.add_edge('I', 'C', nms, [f_IC, T_IC])
+        #g.add_transition('I', 'C', nms, [f_IC, T_IC])
     
-        #g.add_edge('C', 'H', nms, [f_CH, T_CH])
-        #g.add_edge('C', 'B', nms, [f_CB, T_CB])
-        #g.add_edge('C', 'U', nms, [f_CU, T_CU])
-        #g.add_edge('C', 'R', nms, [f_CR, T_CR])
+        #g.add_transition('C', 'H', nms, [f_CH, T_CH])
+        #g.add_transition('C', 'B', nms, [f_CB, T_CB])
+        #g.add_transition('C', 'U', nms, [f_CU, T_CU])
+        #g.add_transition('C', 'R', nms, [f_CR, T_CR])
     
-        #g.add_edge('H', 'B', nms, [f_HB, T_HB])
-        #g.add_edge('H', 'U', nms, [f_HU, T_HU])
-        #g.add_edge('H', 'R', nms, [f_HR, T_HR])
-        #g.add_edge('H', 'D', nms, [f_HD, T_HD])
+        #g.add_transition('H', 'B', nms, [f_HB, T_HB])
+        #g.add_transition('H', 'U', nms, [f_HU, T_HU])
+        #g.add_transition('H', 'R', nms, [f_HR, T_HR])
+        #g.add_transition('H', 'D', nms, [f_HD, T_HD])
     
-        #g.add_edge('B', 'H', nms, [f_BH, T_BH])
-        #g.add_edge('B', 'U', nms, [f_BU, T_BU])
-        #g.add_edge('B', 'R', nms, [f_BR, T_BR])
-        #g.add_edge('B', 'D', nms, [f_BD, T_BD])
+        #g.add_transition('B', 'H', nms, [f_BH, T_BH])
+        #g.add_transition('B', 'U', nms, [f_BU, T_BU])
+        #g.add_transition('B', 'R', nms, [f_BR, T_BR])
+        #g.add_transition('B', 'D', nms, [f_BD, T_BD])
     
-        #g.add_edge('U', 'B', nms, [f_UB, T_UB])
-        #g.add_edge('U', 'H', nms, [f_UH, T_UH])
-        #g.add_edge('U', 'R', nms, [f_UR, T_UR])
-        #g.add_edge('U', 'D', nms, [f_UD, T_UD])
+        #g.add_transition('U', 'B', nms, [f_UB, T_UB])
+        #g.add_transition('U', 'H', nms, [f_UH, T_UH])
+        #g.add_transition('U', 'R', nms, [f_UR, T_UR])
+        #g.add_transition('U', 'D', nms, [f_UD, T_UD])
     
         #t = 0.
         #time_steps = 0
@@ -1361,7 +1361,7 @@ class InfectionCurve:
         g = Graph()
     
         for node in ['I','C','R','H','B','U','D',]:
-            g.add_node(node, 0)
+            g.add_compartment(node, 0)
     
         g.set_node('I', p.N_init)
         
@@ -1426,28 +1426,28 @@ class InfectionCurve:
         f_UD = 1. - f_BH - f_BU - f_BR # probability of death in ICU
                                                                         
     
-        g.add_edge('I', 'I', nms, [p.R,  0])
+        g.add_transition('I', 'I', nms, [p.R,  0])
         
-        g.add_edge('I', 'C', nms, [f_IC, T_IC])
+        g.add_transition('I', 'C', nms, [f_IC, T_IC])
     
-        g.add_edge('C', 'H', nms, [f_CH, T_CH])
-        g.add_edge('C', 'B', nms, [f_CB, T_CB])
-        g.add_edge('C', 'U', nms, [f_CU, T_CU])
+        g.add_transition('C', 'H', nms, [f_CH, T_CH])
+        g.add_transition('C', 'B', nms, [f_CB, T_CB])
+        g.add_transition('C', 'U', nms, [f_CU, T_CU])
     
-        g.add_edge('H', 'B', nms, [f_HB, T_HB])
-        g.add_edge('H', 'U', nms, [f_HU, T_HU])
-        g.add_edge('H', 'R', nms, [f_HR, T_HR])
-        g.add_edge('H', 'D', nms, [f_HD, T_HD])
+        g.add_transition('H', 'B', nms, [f_HB, T_HB])
+        g.add_transition('H', 'U', nms, [f_HU, T_HU])
+        g.add_transition('H', 'R', nms, [f_HR, T_HR])
+        g.add_transition('H', 'D', nms, [f_HD, T_HD])
     
-        g.add_edge('B', 'H', nms, [f_BH, T_BH])
-        g.add_edge('B', 'U', nms, [f_BU, T_BU])
-        g.add_edge('B', 'R', nms, [f_BR, T_BR])
-        g.add_edge('B', 'D', nms, [f_BD, T_BD])
+        g.add_transition('B', 'H', nms, [f_BH, T_BH])
+        g.add_transition('B', 'U', nms, [f_BU, T_BU])
+        g.add_transition('B', 'R', nms, [f_BR, T_BR])
+        g.add_transition('B', 'D', nms, [f_BD, T_BD])
     
-        g.add_edge('U', 'B', nms, [f_UB, T_UB])
-        g.add_edge('U', 'H', nms, [f_UH, T_UH])
-        g.add_edge('U', 'R', nms, [f_UR, T_UR])
-        g.add_edge('U', 'D', nms, [f_UD, T_UD])
+        g.add_transition('U', 'B', nms, [f_UB, T_UB])
+        g.add_transition('U', 'H', nms, [f_UH, T_UH])
+        g.add_transition('U', 'R', nms, [f_UR, T_UR])
+        g.add_transition('U', 'D', nms, [f_UD, T_UD])
 
         #from graph_tools import Graph
     #}}}    

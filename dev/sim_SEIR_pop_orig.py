@@ -102,10 +102,15 @@ g = cv19.Graph_nd()
 # al ppo. todos en S con la distrib de la poblacion:
 # 1. inventar una PDF cualquiera para la distrib de poblacion:
 # en este ejemplo hay Nages=3 rangos: joven, adulto, mayor
-Nages = 3
 pdf = np.array([5, 3, 2])
+
+
+Nages = len(pdf)
 pdf = pdf / float(pdf.sum())
 r, rep = random_gen(pdf.cumsum(), population)
+
+rep = np.array([.8,.2,.1])*population
+
 pop_by_age = np.c_[rep]
 
 
@@ -122,6 +127,8 @@ R0 = np.zeros([Nages,1])
 
 S, E, I, R = S0, E0, I0, R0
 
+zs = np.zeros([Nages,1])
+pops = np.c_[[[population],[population],[population]]]
 
 # transition probabilities may depend on the age:
 #----------------------------------------------------
@@ -145,61 +152,50 @@ t = 0.
 time_steps = 0
 t_max = 140
 
-print('S :::::::::')
-print(S)
-print('I :::::::::')
-print(I)
+
 
 while t < t_max:
 
     time_steps = time_steps + 1
-
     t_prev = t
     t = t + p.dt
     ts.append(t)
 
-    # (( S ))
-
-    # al actualziar S usar el I por edades y el S total.
-    Sf = S[:,-1].reshape(3,1)
-    St = np.c_[([S[:,-1].sum()]*3)]
+    # (( S )) al actualzar S usar el I por edades y el S total.
+    Sf = S[:,-1].reshape(3,1) # distrib. el dia anterior
+    St = np.c_[([S[:,-1].sum()]*3)] # total S el dia anterior
     If = I[:,-1].reshape(3,1)
     dS = - St * If / population * betas
-
-    n_S = Sf + dS
+    #dS = - Sf * If / pop_by_age * betas
+    n_S = np.maximum(Sf + dS, zs)
 
     # (( E ))
-
-    # para el lag:
-    # reemplazar I[:,-1] por I[:,-l:] y pesar por la distribución
-    # de tiempos de retardo.
-
     It = np.c_[([I[:,-1].sum()]*3)]
     Ef = E[:,-1].reshape(3,1) 
     dE = St * It / population * betas - sigmas * Ef
-    n_E = Ef + dE
+    dE = Sf * It / pop_by_age * betas - sigmas * Ef
+    n_E = np.minimum(Ef + dE, pop_by_age)
 
     # (( I ))
-
     dI =  sigmas*Ef  - gammas * If
-    n_I = If + dI
+    n_I = np.minimum(If + dI, pops)
 
     # (( R ))
-
     Rf = R[:,-1].reshape(3,1) 
-    dR =  sigmas*Ef  - gammas * If
-    n_R = Rf + dR
+    dR =  gammas * If
+    n_R = np.minimum(Rf + dR, pop_by_age)
 
     S = np.insert(S, [time_steps], n_S, axis=1)
     E = np.insert(E, [time_steps], n_E, axis=1)
     I = np.insert(I, [time_steps], n_I, axis=1)
     R = np.insert(R, [time_steps], n_R, axis=1)
-
 ##}}}
 #
-#
-#
-#
+    # para el lag:
+    # reemplazar I[:,-1] por I[:,-l:] y pesar por la distribución
+    # de tiempos de retardo.
+
+
 ##------------------------------------------------------- PLOT
 ##{{{
 #
@@ -211,10 +207,11 @@ clrs = ['red']*3 + ['blue']*3 + ['green']*3 + ['orange']*3
 t = ts
 
 plt.rcParams['savefig.facecolor'] = "0.8"
-fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+fig, ax = plt.subplots(1, 3, figsize=(20, 10))
 
 #--- SIMU linear
 for i, ic in enumerate(ics):
+    if i%3!=0: continue
     sns.lineplot(x=t, y=ic, sort=False, linewidth=1, ax=ax[0],
             label=labels[i], color=clrs[i])
     #sns.scatterplot(t, ic, ax=ax[0])
@@ -225,24 +222,33 @@ ax[0].legend()
 ax[0].grid()
 ax[0].set_title('Simulation')
 #---
-ax[1].set(yscale="log")
-ax[1].yaxis.set_major_formatter(\
-        ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
-ax[1].set_title('Simulation')
-
-#--- SIMU log
 for i, ic in enumerate(ics):
+    if i%3!=1: continue
     sns.lineplot(x=t, y=ic, sort=False, linewidth=1, ax=ax[1],
-            color=clrs[i])
-    #sns.scatterplot(t, ic, ax=ax[1])
+            label=labels[i], color=clrs[i])
+    #sns.scatterplot(t, ic, ax=ax[0])
+
 ax[1].set_xlabel('Time [days]', fontsize=22)
 ax[1].set_ylabel('Number infected', fontsize=22)
+ax[1].legend()
 ax[1].grid()
+ax[1].set_title('Simulation')
 
+#---
+for i, ic in enumerate(ics):
+    if i%3!=2: continue
+    sns.lineplot(x=t, y=ic, sort=False, linewidth=1, ax=ax[2],
+            label=labels[i], color=clrs[i])
+    #sns.scatterplot(t, ic, ax=ax[0])
+
+ax[2].set_xlabel('Time [days]', fontsize=22)
+ax[2].set_ylabel('Number infected', fontsize=22)
+ax[2].legend()
+ax[2].grid()
+ax[2].set_title('Simulation')
 
 
 #--- plt
-
 plt.xticks(rotation=0, fontsize=22)
 plt.yticks(rotation=90, fontsize=22)
 plt.tight_layout()

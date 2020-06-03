@@ -33,10 +33,6 @@ class table_draw:
         print(self.D['x'][j])
 
 
-
-
-
-
 if __name__ == '__main__':
 
     T = table_draw()
@@ -58,9 +54,3 @@ if __name__ == '__main__':
     T.add_clean_column('y',l)
 
     T.random_gen('x','y')
-
-
-
-
-
-
